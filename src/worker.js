@@ -732,11 +732,9 @@ header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);bo
 .top nav{display:flex;gap:20px;font-size:12.5px;white-space:nowrap;margin-left:auto}
 .top nav a{color:var(--nav-ink);opacity:.85}
 .top nav a:hover{opacity:1;text-decoration:none}
-.seg{display:flex;flex:none;align-items:center;gap:0;padding:0}
-.seg button{border:0;background:transparent;color:var(--nav-ink);opacity:.6;font-size:11px;line-height:1;padding:4px 6px;cursor:pointer;font-family:inherit}
-.seg button:first-child{border-right:1px solid rgba(140,140,148,.45)}
-.seg button:hover{opacity:1}
-html[data-theme="jobs"] .seg [data-th="jobs"],html[data-theme="flat"] .seg [data-th="flat"]{background:transparent;color:var(--logo-ink);opacity:1;box-shadow:none;font-weight:700}
+.lamp{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:0;background:transparent;color:var(--nav-ink);opacity:.75;cursor:pointer;padding:0}
+.lamp:hover{opacity:1}
+html[data-theme="flat"] .lamp{color:#f6c453;opacity:1;filter:drop-shadow(0 0 5px rgba(246,196,83,.55))}
 .hero{padding:72px 0 4px;text-align:center}
 .hero h1{font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-.018em;margin:0}
 html[data-theme="flat"] .hero h1{font-weight:200;letter-spacing:.14em;text-shadow:none}
@@ -864,15 +862,15 @@ html[data-theme="flat"] .err{border-radius:3px}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
-.acct-btns{display:flex;gap:0;align-items:stretch;flex:none;height:28px;border:1px solid var(--chip-border);background:var(--chip-bg);box-shadow:var(--chip-shadow)}
-.acct-btns.solo{border:0;background:transparent;box-shadow:none}
-.avatar-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
+.acct-btns{display:flex;gap:2px;align-items:stretch;flex:none;height:28px;padding:2px;border:1px solid var(--seg-border);background:var(--seg-track);box-shadow:var(--seg-shadow)}
+.acct-btns.solo{border:0;background:transparent;box-shadow:none;padding:0}
+.avatar-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:1px solid var(--seg-border);background:var(--seg-track);color:var(--seg-ink);box-shadow:var(--seg-shadow)}
 .avatar-btn:hover{text-decoration:none;filter:brightness(1.05)}
 @media (max-width:734px){.acct-btn{padding:0 8px}}
-.acct-btn{display:flex;align-items:center;font-size:12px;font-weight:600;padding:0 11px;white-space:nowrap;color:var(--chip-ink)}
+.acct-btn{display:flex;align-items:center;font-size:12px;font-weight:500;padding:0 11px;white-space:nowrap;color:var(--seg-ink)}
 .acct-btn:hover{text-decoration:none;filter:brightness(1.04)}
-.acct-btn.primary{border-left:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow)}
-.acct-btn.primary:hover{background:var(--btn-hover)}
+.acct-btn.primary{background:var(--seg-on-bg);color:var(--seg-on-ink);box-shadow:var(--seg-on-shadow);font-weight:600}
+.acct-btn.primary:hover{filter:brightness(1.03)}
 .auth-card{max-width:420px;margin:30px auto}
 .auth-card .f-inp{margin:0 0 12px}
 .auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
@@ -934,13 +932,12 @@ document.querySelectorAll('[data-copy]').forEach(function(btn){
     function fallback(){ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');done();}catch(_){} ta.remove(); }
   });
 });
-document.querySelectorAll('.seg [data-th]').forEach(function(b){
-  b.addEventListener('click',function(){
-    var t=b.getAttribute('data-th');
-    document.documentElement.setAttribute('data-theme',t);
-    document.cookie='theme='+t+'; path=/; max-age=31536000';
-  });
-});
+var lamp=document.getElementById('lamp');
+if(lamp){ lamp.addEventListener('click',function(){
+  var t=document.documentElement.getAttribute('data-theme')==='flat'?'jobs':'flat';
+  document.documentElement.setAttribute('data-theme',t);
+  document.cookie='td_theme='+t+'; path=/; max-age=31536000';
+}); }
 var at=document.getElementById('adult-toggle');
 if(at){ at.addEventListener('click',function(){
   var on=/(?:^|;\\s*)adult=1(?:;|$)/.test(document.cookie);
@@ -998,7 +995,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
 <nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
-<div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
+<button type="button" class="lamp" id="lamp" aria-label="切换浅色 / 深色" title="切换浅色 / 深色"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 18h5"/><path d="M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.2 1.1 2.2h5c0-1 .4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg></button>
 <span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 </div></header>
 <main class="wrap${center ? " center-main" : ""}">${nosearch ? "" : heroHtml(stats, q)}${!nosearch && ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1></div>` : ""}${body}</main>
