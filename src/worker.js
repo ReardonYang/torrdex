@@ -1116,8 +1116,8 @@ function pageTorrent(data, cats, adultOn) {
     : `<span class="mut">暂无抓取历史（云端只存最新快照）</span>`;
   const body = `
 <section><div class="card">
-<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.01em;word-break:break-all">${esc(t.name_clean)}</h1>
-${t.name_raw && t.name_raw !== t.name_clean ? `<div class="mut">原始名：${esc(t.name_raw)}</div>` : ""}
+<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.01em;word-break:break-all">${esc(t.name)}</h1>
+${t.name_raw && t.name_raw !== t.name ? `<div class="mut">原始名：${esc(t.name_raw)}</div>` : ""}
 ${data.title ? `<div style="margin-top:4px">所属作品：<a href="/title/${data.title.id}">${esc(data.title.canonical_title)}${data.title.year ? ` (${esc(data.title.year)})` : ""}</a></div>` : ""}
 <div style="margin:14px 0"><button class="bigmag" data-copy="${esc(t.magnet)}">复制磁力链接</button></div>
 <textarea class="magnet" readonly onclick="this.select()">${esc(t.magnet)}</textarea>
@@ -1134,7 +1134,7 @@ ${t.group_name ? `<dt>发布组</dt><dd>${esc(t.group_name)}${t.group_verified ?
 <section><h2 class="sec">文件清单</h2><div class="tblwrap">${filesHtml}</div></section>
 <section><h2 class="sec">Tracker（${data.trackers.length} 个种子自带 + 公共列表）</h2>
 <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all">${data.trackers.map(esc).join("<br>") || '<span class="mut">无自带 tracker，磁力中已附公共 tracker 列表</span>'}</div></section>`;
-  return layout({ title: `${t.name_clean} — 种子详情`, body, adultOn });
+  return layout({ title: `${t.name} — 种子详情`, body, adultOn });
 }
 
 function pageList(listData, cats, adultOn, heading) {
