@@ -1,8 +1,8 @@
 // ============================================================
 // Torrent 全品类通用搜索站 — Cloudflare Worker (API + 前端同体, 无构建无依赖)
 // 配套: PRD-v1.md (§6 FR / §7 排序健康 / §11 接口), data-model-sqlite.sql (§10.3 查询口径)
-// 数据: Turso (libSQL HTTP /v2/pipeline), 凭据只读 env: TURSO_URL / TURSO_TOKEN
-// 部署: 见同目录 README.md (Dashboard 粘贴本文件 + 两个 Secret)
+// 数据: Turso (libSQL HTTP /v2/pipeline), 凭据 env: TURSO_URL / TURSO_TOKEN (读写: 搜索日志/账号/收藏需写)
+// 部署: Git 集成 (推送仓库 main 分支 -> Cloudflare Workers Builds 自动部署), 见 README.md
 // 铁律 (PRD §1.3): 所有数字必须真数 — 做种/下载来自库内实测快照, 无数据写「未知」,
 //                 绝不编造速度/下载量/热度。
 // ============================================================
@@ -27,9 +27,8 @@ const PUBLIC_TRACKERS = [
   "udp://udp.tracker.leechers-paradise.org:6969/announce",
 ];
 
-// 热搜冷启动种子词 (FR-HOME-01: 仅无真实日志时用, 上线一周后必须被真实数据替代)
-const SEED_TERMS = ["沙丘2", "繁花", "庆余年2", "奥本海默", "Windows 11", "Ubuntu 24.04",
-  "Office 2021", "Photoshop 2024", "黑神话悟空", "艾尔登法环", "三体", "流浪地球2"];
+// 热搜只用真实搜索日志 (trending_terms 由日批从 search_logs 重算, FR-HOME-01);
+// 无真实数据时首页不显示热搜区 (2026-10-27 用户定: 撤掉冷启动种子词)。
 
 const HEALTH_LABEL = { alive: "活", weak: "弱", dead: "死", unknown: "未知" };
 const MAIN_CODECS = new Set(["x264", "x265", "AV1", "VP9"]);
@@ -165,12 +164,12 @@ function catById(cats, id) { return cats.find((c) => c.id === id) || null; }
 
 // ---------------- 成人策略 (PRD §5: 默认关, 主动开启才参与) ----------------
 
-// 必须同时满足: 页面开关写入的 cookie adult=1 且 本次请求带 adult=1 参数。
-// 任一缺失 -> SQL 层排除 policy='adult' 的分类与作品。
+// 只认 cookie adult=1: 该 cookie 只能由页脚开关经年龄确认后写入, 写入本身即「主动开启」
+// 的凭据。旧版「cookie + URL 参数双条件」会让开关在普通站内跳转后静默失效 (参数丢失),
+// 用户反馈按钮失效, 2026-10-27 改为单条件。无 cookie -> SQL 层排除成人分类与作品。
 export function adultAllowed(request, url) {
   const cookie = request.headers.get("Cookie") || "";
-  const hasCookie = /(?:^|;\s*)adult=1(?:;|$)/.test(cookie);
-  return hasCookie && url.searchParams.get("adult") === "1";
+  return /(?:^|;\s*)adult=1(?:;|$)/.test(cookie);
 }
 
 function adultSql(alias, allowed) {
@@ -615,9 +614,8 @@ async function doHome(env, allowed) {
     doList(env, "latest", null, allowed),
     doList(env, "top", null, allowed),
   ]);
-  const trending = trendRows.length
-    ? { source: "logs", terms: trendRows.map((r) => ({ term: r.term, count: r.search_count_7d })) }
-    : { source: "seed", terms: SEED_TERMS.map((term) => ({ term, count: null })) };
+  const trending = { source: trendRows.length ? "logs" : "none",
+    terms: trendRows.map((r) => ({ term: r.term, count: r.search_count_7d })) };
   return { stats, trending, latest: latest.torrents.slice(0, 10), top: top.torrents.slice(0, 12) };
 }
 
@@ -717,10 +715,6 @@ header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);bo
 .top-in{display:flex;align-items:center;gap:18px;height:52px}
 .logo{font-weight:700;font-size:17px;letter-spacing:-.01em;color:var(--logo-ink);white-space:nowrap;text-shadow:var(--logo-shadow)}
 .logo:hover{text-decoration:none}
-.hsearch-s{display:flex;align-items:center;background:var(--slot-bg);border:1px solid var(--slot-border);border-radius:980px;height:38px;flex:1;min-width:0;max-width:560px;padding:0 16px;position:relative;box-shadow:var(--slot-shadow)}
-.hsearch-s:focus-within{box-shadow:var(--slot-ring)}
-.hsearch-s input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:14px;color:var(--slot-ink);height:100%}
-.hsearch-s input::placeholder{color:var(--ph)}
 .top nav{display:flex;gap:20px;font-size:12.5px;white-space:nowrap;margin-left:auto}
 .top nav a{color:var(--nav-ink);opacity:.85}
 .top nav a:hover{opacity:1;text-decoration:none}
@@ -828,7 +822,6 @@ html[data-theme="flat"] .err{border-radius:3px}
  .top-in{gap:10px}
  .logo{font-size:15px}
  .seg button{padding:5px 8px;font-size:11.5px}
- .hsearch-s{height:36px;padding:0 12px}
  .hero{padding:48px 0 2px}
  .hero h1{font-size:34px}
  html[data-theme="flat"] .hero h1{letter-spacing:.08em}
@@ -843,6 +836,26 @@ html[data-theme="flat"] .err{border-radius:3px}
  .wrap{padding:0 14px}
 }
 .tblwrap .mut{display:block;padding:14px 20px}
+/* 居中搜索 (2026-10-27: 搜索框撤出抬头栏回页面中央; 首页大号, 内页同组件) */
+.search-hero{display:flex;max-width:640px;margin:24px auto 4px;border:1px solid var(--field-border);background:var(--field-bg);box-shadow:var(--field-shadow);position:relative}
+.search-hero input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:16px;color:var(--ink);height:48px;padding:0 16px}
+.search-hero input::placeholder{color:var(--ph)}
+.search-hero button{flex:none;border:0;border-left:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);font-size:15px;padding:0 26px;cursor:pointer;font-family:inherit}
+.search-hero button:hover{background:var(--btn-hover)}
+.search-hero.big input[type=search]{height:54px;font-size:17px}
+/* 收藏按钮 */
+.favbtn{flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow);padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:none}
+.favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
+html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
+/* 账号 */
+.acct-link{font-size:12.5px;color:var(--nav-ink);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.auth-card{max-width:420px;margin:30px auto}
+.auth-card .f-inp{margin:0 0 12px}
+.auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
+.auth-btn{width:100%;height:42px;border:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow);font-size:15px;cursor:pointer;font-family:inherit}
+.auth-btn:hover{background:var(--btn-hover)}
+/* 全站矩形 (2026-10-27 用户定: 控件与视觉一律不用圆角) */
+*,*::before,*::after{border-radius:0!important}
 `;
 
 const CLIENT_JS = `
@@ -897,13 +910,39 @@ document.querySelectorAll('.seg [data-th]').forEach(function(b){
 var at=document.getElementById('adult-toggle');
 if(at){ at.addEventListener('click',function(){
   var on=/(?:^|;\\s*)adult=1(?:;|$)/.test(document.cookie);
-  if(on){ document.cookie='adult=; path=/; max-age=0'; location.href=location.pathname; }
+  if(on){ document.cookie='adult=; path=/; max-age=0'; location.reload(); }
   else if(confirm('成人分类包含成人内容。确认你已年满 18 周岁并主动开启?')){
-    document.cookie='adult=1; path=/; max-age=2592000';
-    var u=new URL(location.href); u.searchParams.set('adult','1'); location.href=u.toString();
+    document.cookie='adult=1; path=/; max-age=2592000'; location.reload();
   }
 });}
+// 账号入口: td_user 仅供显示, 登录态以 HttpOnly 的 td_session 为准
+var acct=document.getElementById('acct-link');
+var mu=document.cookie.match(/(?:^|;\\s*)td_user=([^;]*)/);
+if(acct&&mu){ acct.textContent=decodeURIComponent(mu[1]); acct.href='/account'; }
+// 收藏: 状态由 /api/favorites/ids 回填; 未登录点击跳登录页
+var favBtns=document.querySelectorAll('[data-fav]');
+if(favBtns.length){
+  if(mu){ fetch('/api/favorites/ids').then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(d&&d.ids){ favBtns.forEach(function(b){ var on=d.ids.indexOf(b.getAttribute('data-fav'))>=0;
+      b.classList.toggle('on',on); b.textContent=on?'★ 已收藏':'☆ 收藏'; }); }
+  }).catch(function(){}); }
+  favBtns.forEach(function(b){ b.addEventListener('click',function(e){
+    e.preventDefault(); e.stopPropagation();
+    if(!mu){ location.href='/login?next='+encodeURIComponent(location.pathname+location.search); return; }
+    fetch('/api/favorites/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({infohash:b.getAttribute('data-fav')})})
+      .then(function(r){ if(r.status===401){ location.href='/login?next='+encodeURIComponent(location.pathname+location.search); return null; } return r.json(); })
+      .then(function(d){ if(!d) return; var on=!!d.fav; b.classList.toggle('on',on); b.textContent=on?'★ 已收藏':'☆ 收藏'; })
+      .catch(function(){});
+  }); });
+}
 `;
+
+// 居中搜索组件 (2026-10-27: 搜索框只放页面中央, 不进抬头栏)
+function searchHeroHtml(q, big) {
+  return `<form class="search-hero${big ? " big" : ""}" action="/search" method="get" role="search">` +
+    `<input type="search" name="q" data-ac placeholder="搜索片名 / 番号 / IMDb ID / infohash" value="${esc(q || "")}" autocomplete="off" aria-label="搜索"${big ? " autofocus" : ""}>` +
+    `<button type="submit">搜索</button></form>`;
+}
 
 function layout({ title, body, adultOn, q, home }) {
   return `<!DOCTYPE html>
@@ -913,13 +952,11 @@ function layout({ title, body, adultOn, q, home }) {
 <body>
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
-<form class="hsearch-s" action="/search" method="get" role="search">
-<input type="search" name="q" data-ac placeholder="搜索片名 / 番号 / IMDb ID / infohash" value="${esc(q || "")}" autocomplete="off" aria-label="搜索"${home ? " autofocus" : ""}>
-</form>
 <nav><a href="/top">Top100</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
+<a class="acct-link" id="acct-link" href="/login">登录</a>
 <div class="seg" role="group" aria-label="视觉风格"><button type="button" data-th="jobs">实体</button><button type="button" data-th="flat">扁平</button></div>
 </div></header>
-<main class="wrap">${body}</main>
+<main class="wrap">${home ? "" : searchHeroHtml(q || "")}${body}</main>
 <footer><div class="wrap">
 <a href="/about">数据口径</a><a href="/takedown">权利投诉</a>
 <button id="adult-toggle" class="chipbtn" type="button">成人分类：${adultOn ? "开" : "关"}</button>
@@ -957,7 +994,7 @@ function torrentRow(t, cats) {
   return `<div class="row2">
   <div class="r1"><span class="hdot h-${esc(t.health_band || "unknown")}"></span>
   <a class="nm" href="/torrent/${esc(t.infohash)}">${esc(t.name_clean || t.name)}</a>
-  <button class="mag" data-copy="${esc(t.magnet)}" title="复制磁力链接">磁力</button></div>
+  <button class="mag" data-copy="${esc(t.magnet)}" title="复制磁力链接">磁力</button><button class="favbtn" data-fav="${esc(t.infohash)}" type="button">☆ 收藏</button></div>
   <div class="r2">${specTags(t)}
   <span>${esc(fmtSize(t.total_size))}</span><span>${t.file_count} 个文件</span>
   <span>做种 ${t.seeders == null ? "未知" : esc(fmtNum(t.seeders))} / 下载 ${t.leechers == null ? "未知" : esc(fmtNum(t.leechers))}</span>
@@ -980,9 +1017,9 @@ function pageHome(home, cats, adultOn) {
 <div class="hero"><h1>TorrDex</h1>
 <p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
 </div>
+${searchHeroHtml("", true)}
 <div class="stats-line">已索引 <b>${esc(fmtNum(s.torrents))}</b> 条种子 · <b>${esc(fmtNum(s.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(s.alive))} 条 · 更新于 ${esc(updated)}</div>
-<div class="chips">${chips}</div>
-${home.trending.source === "seed" ? `<div class="mut" style="text-align:center">热搜为冷启动种子词，积累真实搜索日志后自动切换为真实热搜（FR-HOME-01）。</div>` : ""}
+${home.trending.terms.length ? `<div class="chips">${chips}</div>` : ""}
 <section><h2 class="sec">分类</h2><div class="chips" style="justify-content:flex-start">${catCards}</div></section>
 <section><h2 class="sec">最新收录</h2>${home.latest.length ? `<div class="list">${home.latest.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>
 <section><h2 class="sec">热门种子</h2>${home.top.length ? `<div class="list">${home.top.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
@@ -1119,7 +1156,7 @@ function pageTorrent(data, cats, adultOn) {
 <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.01em;word-break:break-all">${esc(t.name)}</h1>
 ${t.name_raw && t.name_raw !== t.name ? `<div class="mut">原始名：${esc(t.name_raw)}</div>` : ""}
 ${data.title ? `<div style="margin-top:4px">所属作品：<a href="/title/${data.title.id}">${esc(data.title.canonical_title)}${data.title.year ? ` (${esc(data.title.year)})` : ""}</a></div>` : ""}
-<div style="margin:14px 0"><button class="bigmag" data-copy="${esc(t.magnet)}">复制磁力链接</button></div>
+<div style="margin:14px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="bigmag" data-copy="${esc(t.magnet)}">复制磁力链接</button><button class="favbtn" data-fav="${esc(t.infohash)}" type="button" style="padding:11px 18px;font-size:14px">☆ 收藏</button></div>
 <textarea class="magnet" readonly onclick="this.select()">${esc(t.magnet)}</textarea>
 <dl class="kv" style="margin-top:12px">
 <dt>infohash</dt><dd><code>${esc(t.infohash)}</code></dd>
@@ -1177,6 +1214,147 @@ function pageAbout(adultOn) {
 
 function htmlResp(html, status = 200) {
   return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+
+// ---------------- 账号 (邮箱注册/登录 + 收藏种子 + 搜索历史; 2026-10-27 用户点名新增) ----------------
+// users 表已在 data-model 里 (email 唯一, password_hash 存 PBKDF2 格式串);
+// sessions / user_favorites(收藏种子, 区别于模型里按作品的 favorites) / user_search_history 按需自建 (幂等)。
+const AUTH_DDL = [
+  `CREATE TABLE IF NOT EXISTS sessions (
+     token_hash TEXT PRIMARY KEY,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+     expires_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`,
+  `CREATE TABLE IF NOT EXISTS user_favorites (
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     infohash TEXT NOT NULL REFERENCES torrents(infohash) ON DELETE CASCADE,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+     PRIMARY KEY (user_id, infohash))`,
+  `CREATE TABLE IF NOT EXISTS user_search_history (
+     id INTEGER PRIMARY KEY,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     query_raw TEXT NOT NULL,
+     query_normalized TEXT NOT NULL,
+     result_count INTEGER NOT NULL DEFAULT 0,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_ush_user ON user_search_history(user_id, id DESC)`,
+];
+let authReady = false;
+async function ensureAuthTables(env) {
+  if (authReady) return;
+  await turso(env, AUTH_DDL.map((sql) => ({ sql, args: [] })));
+  authReady = true;
+}
+
+const PBKDF2_ITER = 100000;
+function b64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function unb64(s) { return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); }
+export async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PBKDF2_ITER, hash: "SHA-256" }, key, 256);
+  return `pbkdf2$${PBKDF2_ITER}$${b64(salt)}$${b64(bits)}`;
+}
+export async function verifyPassword(password, stored) {
+  try {
+    const [scheme, iter, saltB64, hashB64] = String(stored || "").split("$");
+    if (scheme !== "pbkdf2") return false;
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: unb64(saltB64), iterations: parseInt(iter, 10) || PBKDF2_ITER, hash: "SHA-256" }, key, 256);
+    const got = new Uint8Array(bits), want = unb64(hashB64);
+    if (got.length !== want.length) return false;
+    let diff = 0;
+    for (let i = 0; i < got.length; i++) diff |= got[i] ^ want[i];
+    return diff === 0;
+  } catch { return false; }
+}
+async function sha256hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function parseCookies(request) {
+  const out = {};
+  for (const part of (request.headers.get("Cookie") || "").split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  }
+  return out;
+}
+async function getUser(env, request) {
+  const tok = parseCookies(request).td_session;
+  if (!tok) return null;
+  await ensureAuthTables(env);
+  const rows = await q1(env,
+    `SELECT u.id, u.email, u.created_at FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ','now')`, [await sha256hex(tok)]);
+  return rows.length ? rows[0] : null;
+}
+async function createSession(env, userId) {
+  const token = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const expires = new Date(Date.now() + 30 * 864e5).toISOString().replace(/\.\d+Z$/, "Z");
+  await turso(env, [{ sql: "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?,?,?)",
+    args: [await sha256hex(token), userId, expires] }]);
+  return token;
+}
+function sessionCookies(token, email) {
+  return [
+    `td_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+    `td_user=${encodeURIComponent(email)}; Path=/; Secure; SameSite=Lax; Max-Age=2592000`,
+  ];
+}
+function clearCookies() {
+  return ["td_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+          "td_user=; Path=/; Secure; SameSite=Lax; Max-Age=0"];
+}
+function redirectResp(location, cookies) {
+  const h = new Headers({ Location: location });
+  for (const c of cookies || []) h.append("Set-Cookie", c);
+  return new Response(null, { status: 302, headers: h });
+}
+function safeNext(next) {
+  const n = String(next || "/");
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/";
+}
+
+function pageAuth(mode, opts, adultOn) {
+  const isLogin = mode === "login";
+  const { error, next, email } = opts || {};
+  const body = `<div class="card auth-card">
+<h1 class="ptitle" style="margin:4px 0 16px;font-size:24px">${isLogin ? "登录" : "注册"}</h1>
+${error ? `<div class="err" style="margin:0 0 14px">${esc(error)}</div>` : ""}
+<form method="post" action="/${isLogin ? "login" : "register"}">
+<input type="hidden" name="next" value="${esc(next || "/")}">
+<label>邮箱</label><input class="f-inp" type="email" name="email" required autocomplete="email" value="${esc(email || "")}" placeholder="you@example.com">
+<label>密码${isLogin ? "" : "（至少 8 位）"}</label><input class="f-inp" type="password" name="password" required autocomplete="${isLogin ? "current-password" : "new-password"}">
+${isLogin ? "" : `<label>再输一次密码</label><input class="f-inp" type="password" name="password2" required autocomplete="new-password">`}
+<button class="auth-btn" type="submit">${isLogin ? "登录" : "注册并登录"}</button>
+</form>
+<p class="mut" style="margin-top:14px">${isLogin
+  ? `还没有账号？<a href="/register?next=${encodeURIComponent(next || "/")}">注册</a>`
+  : `已有账号？<a href="/login?next=${encodeURIComponent(next || "/")}">直接登录</a>`}</p>
+</div>`;
+  return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn });
+}
+
+function pageAccount(user, adultOn) {
+  const body = `<section><h1 class="ptitle">我的账号</h1>
+<div class="card">
+<div style="font-size:16px;font-weight:600">${esc(user.email)}</div>
+<div class="mut" style="margin-top:4px">注册于 ${esc(fmtTime(user.created_at))}</div>
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+<a class="favbtn" style="padding:8px 16px;font-size:13px" href="/favorites">★ 我的收藏</a>
+<a class="favbtn" style="padding:8px 16px;font-size:13px" href="/history">搜索历史</a>
+<a class="favbtn" style="padding:8px 16px;font-size:13px" href="/logout">退出登录</a>
+</div></div>
+<div class="card">
+<div style="font-weight:600;margin-bottom:6px">注销账号</div>
+<p class="mut">删除账号及其收藏、搜索历史与全部登录会话，不可恢复。</p>
+<form method="post" action="/account/delete" onsubmit="return confirm('确定注销账号？此操作不可恢复。')">
+<button class="favbtn" type="submit" style="color:#b3261e;border-color:#b3261e">注销账号</button></form>
+</div></section>`;
+  return layout({ title: "我的账号 — TorrDex", body, adultOn });
 }
 
 // ---------------- 路由 ----------------
@@ -1240,6 +1418,28 @@ export default {
         }]);
         return htmlResp(layout({ title: "已提交", body: `<div class="card"><b>投诉已提交</b><p class="mut">我们会核查处理（目标 72 小时），处理结果将通过你留下的联系方式反馈。</p><p><a href="/">回首页</a></p></div>`, adultOn: allowed }));
       }
+      if (path === "/api/favorites/ids") {
+        const user = await getUser(env, request);
+        if (!user) return jsonResp({ error: "unauthorized" }, 401);
+        const rows = await q1(env, "SELECT infohash FROM user_favorites WHERE user_id = ?", [user.id]);
+        return jsonResp({ ids: rows.map((r) => r.infohash) });
+      }
+      if (path === "/api/favorites/toggle" && request.method === "POST") {
+        const user = await getUser(env, request);
+        if (!user) return jsonResp({ error: "unauthorized" }, 401);
+        const payload = await request.json().catch(() => ({}));
+        const ih = String(payload.infohash || "").toLowerCase();
+        if (!/^[0-9a-f]{40}$/.test(ih)) return jsonResp({ error: "bad_infohash" }, 400);
+        const exists = await q1(env, "SELECT 1 AS x FROM user_favorites WHERE user_id = ? AND infohash = ?", [user.id, ih]);
+        if (exists.length) {
+          await turso(env, [{ sql: "DELETE FROM user_favorites WHERE user_id = ? AND infohash = ?", args: [user.id, ih] }]);
+          return jsonResp({ ok: true, fav: false });
+        }
+        const t = await q1(env, "SELECT infohash FROM torrents WHERE infohash = ?", [ih]);
+        if (!t.length) return jsonResp({ error: "not_found" }, 404);
+        await turso(env, [{ sql: "INSERT INTO user_favorites (user_id, infohash) VALUES (?,?)", args: [user.id, ih] }]);
+        return jsonResp({ ok: true, fav: true });
+      }
       if (path.startsWith("/api/")) return jsonResp({ error: "not_found" }, 404);
 
       // ---------- 页面 ----------
@@ -1253,6 +1453,16 @@ export default {
         const res = await doSearch(env, params, allowed);
         logSearch(env, ctx, request, params.q || "", normalizedKey(cleanQuery(params.q || "")),
           res.total || 0, params.cat ? (catByCode(cats, params.cat)?.id ?? null) : null);
+        const sessUser = await getUser(env, request).catch(() => null);
+        if (sessUser && (params.q || "").trim()) {
+          const hp = turso(env, [
+            { sql: "INSERT INTO user_search_history (user_id, query_raw, query_normalized, result_count) VALUES (?,?,?,?)",
+              args: [sessUser.id, String(params.q).slice(0, 200), normalizedKey(cleanQuery(params.q)), res.total || 0] },
+            { sql: "DELETE FROM user_search_history WHERE user_id = ? AND id NOT IN (SELECT id FROM user_search_history WHERE user_id = ? ORDER BY id DESC LIMIT 200)",
+              args: [sessUser.id, sessUser.id] },
+          ]).catch(() => {});
+          if (ctx && ctx.waitUntil) ctx.waitUntil(hp);
+        }
         return htmlResp(pageSearch(res, cats, allowed, params));
       }
       const titleMatch = path.match(/^\/title\/(?:.*-)?(\d+)$/);
@@ -1282,6 +1492,86 @@ export default {
 ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
         return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed }));
       }
+      if (path === "/register" || path === "/login") {
+        const isLogin = path === "/login";
+        if (request.method === "GET" && (await getUser(env, request))) {
+          return redirectResp(safeNext(url.searchParams.get("next")));
+        }
+        if (request.method === "POST") {
+          const form = await request.formData();
+          const email = String(form.get("email") || "").trim().toLowerCase();
+          const password = String(form.get("password") || "");
+          const next = safeNext(form.get("next"));
+          const fail = (msg) => htmlResp(pageAuth(isLogin ? "login" : "register", { error: msg, next, email }, allowed), 400);
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail("邮箱格式不正确。");
+          if (password.length < 8) return fail("密码至少 8 位。");
+          await ensureAuthTables(env);
+          if (isLogin) {
+            const rows = await q1(env, "SELECT id, password_hash FROM users WHERE email = ?", [email]);
+            if (!rows.length || !(await verifyPassword(password, rows[0].password_hash))) return fail("邮箱或密码不正确。");
+            await turso(env, [{ sql: "UPDATE users SET last_login_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = ?", args: [rows[0].id] }]);
+            const token = await createSession(env, rows[0].id);
+            return redirectResp(next, sessionCookies(token, email));
+          }
+          if (password !== String(form.get("password2") || "")) return fail("两次输入的密码不一致。");
+          const exists = await q1(env, "SELECT id FROM users WHERE email = ?", [email]);
+          if (exists.length) return fail("该邮箱已注册，请直接登录。");
+          const hash = await hashPassword(password);
+          await turso(env, [{ sql: "INSERT INTO users (email, password_hash) VALUES (?,?)", args: [email, hash] }]);
+          const rows = await q1(env, "SELECT id FROM users WHERE email = ?", [email]);
+          const token = await createSession(env, rows[0].id);
+          return redirectResp(next, sessionCookies(token, email));
+        }
+        return htmlResp(pageAuth(isLogin ? "login" : "register", { next: url.searchParams.get("next") || "/" }, allowed));
+      }
+      if (path === "/logout") {
+        const tok = parseCookies(request).td_session;
+        if (tok) {
+          await turso(env, [{ sql: "DELETE FROM sessions WHERE token_hash = ?", args: [await sha256hex(tok)] }]).catch(() => {});
+        }
+        return redirectResp("/", clearCookies());
+      }
+      if (path === "/account") {
+        const user = await getUser(env, request);
+        if (!user) return redirectResp("/login?next=/account");
+        return htmlResp(pageAccount(user, allowed));
+      }
+      if (path === "/account/delete" && request.method === "POST") {
+        const user = await getUser(env, request);
+        if (!user) return redirectResp("/login");
+        await turso(env, [
+          { sql: "DELETE FROM user_favorites WHERE user_id = ?", args: [user.id] },
+          { sql: "DELETE FROM user_search_history WHERE user_id = ?", args: [user.id] },
+          { sql: "DELETE FROM sessions WHERE user_id = ?", args: [user.id] },
+          { sql: "DELETE FROM users WHERE id = ?", args: [user.id] },
+        ]);
+        return redirectResp("/", clearCookies());
+      }
+      if (path === "/favorites") {
+        const user = await getUser(env, request);
+        if (!user) return redirectResp("/login?next=/favorites");
+        const rows = await q1(env, `SELECT ${TOR_COLS} ${TOR_JOIN} JOIN user_favorites f ON f.infohash = t.infohash
+          WHERE f.user_id = ? AND t.status = 'active'` + adultSql("t", allowed) + " ORDER BY f.created_at DESC LIMIT 200", [user.id]);
+        const favList = rows.map((r) => torrentJson(r, cats));
+        const body = `<section><h1 class="ptitle">我的收藏</h1>${favList.length
+          ? `<div class="list">${favList.map((t) => torrentRow(t, cats)).join("")}</div>`
+          : `<div class="mut">还没有收藏。在种子行或详情页点「☆ 收藏」即可加入。</div>`}</section>`;
+        return htmlResp(layout({ title: "我的收藏 — TorrDex", body, adultOn: allowed }));
+      }
+      if (path === "/history") {
+        const user = await getUser(env, request);
+        if (!user) return redirectResp("/login?next=/history");
+        if (request.method === "POST") {
+          await turso(env, [{ sql: "DELETE FROM user_search_history WHERE user_id = ?", args: [user.id] }]);
+          return redirectResp("/history");
+        }
+        const rows = await q1(env, "SELECT query_raw, result_count, created_at FROM user_search_history WHERE user_id = ? ORDER BY id DESC LIMIT 100", [user.id]);
+        const items = rows.map((r) => `<div class="row2"><div class="r1"><a class="nm" href="/search?q=${encodeURIComponent(r.query_raw)}">${esc(r.query_raw)}</a></div><div class="r2"><span>${esc(fmtNum(r.result_count))} 条结果</span><span>${esc(fmtTime(r.created_at))}</span></div></div>`).join("");
+        const body = `<section><h1 class="ptitle">搜索历史</h1>${rows.length
+          ? `<div class="list">${items}</div><form method="post" action="/history" style="margin-top:14px" onsubmit="return confirm('清空全部搜索历史？')"><button class="favbtn" type="submit">清空历史</button></form>`
+          : `<div class="mut">暂无搜索记录。登录状态下搜索会自动记录到这里。</div>`}</section>`;
+        return htmlResp(layout({ title: "搜索历史 — TorrDex", body, adultOn: allowed }));
+      }
       if (path === "/takedown") return htmlResp(pageTakedown(allowed));
       if (path === "/about" || path === "/dmca" || path === "/faq") return htmlResp(pageAbout(allowed));
       return htmlResp(layout({ title: "404", body: `<div class="err">页面不存在。<a href="/">回首页</a></div>`, adultOn: allowed }), 404);
@@ -1298,5 +1588,5 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
 // 测试钩子 (不影响 Worker 运行)
 export const __test = {
   normalizedKey, cleanQuery, buildMagnet, rerank, relevanceScore, recScore,
-  adultAllowed, recall, turso, fmtSize,
+  adultAllowed, recall, turso, fmtSize, hashPassword, verifyPassword,
 };

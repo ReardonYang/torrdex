@@ -115,6 +115,12 @@ seenSql.length = 0;
   await worker.fetch(req, env, ctx);
   ok(seenSql.some((s) => s.includes("policy='adult'")), "param without cookie: still excluded");
 }
+seenSql.length = 0;
+{
+  const req = new Request("https://x/api/search?q=dune", { headers: { Cookie: "adult=1" } }); // 只有 cookie (2026-10-27 单条件)
+  await worker.fetch(req, env, ctx);
+  ok(!seenSql.some((s) => s.includes("policy='adult'")), "cookie only (no param): adult allowed after fix");
+}
 
 // ---- 4) rerank: 健康高做种在前, 死种沉底 ----
 {
@@ -142,8 +148,21 @@ seenSql.length = 0;
 // ---- 6) 规范化与 adultAllowed ----
 {
   ok(__test.normalizedKey("Ｄｕｎｅ．2024") === "dune2024", "normalizedKey: NFKC + strip punct");
-  ok(__test.adultAllowed(new Request("https://x/?adult=1", { headers: { Cookie: "adult=1" } }), new URL("https://x/?adult=1")) === true,
-     "adultAllowed true only with cookie+param");
+  ok(__test.adultAllowed(new Request("https://x/", { headers: { Cookie: "adult=1" } }), new URL("https://x/")) === true,
+     "adultAllowed: cookie alone allows (2026-10-27)");
+  ok(__test.adultAllowed(new Request("https://x/?adult=1"), new URL("https://x/?adult=1")) === false,
+     "adultAllowed: param alone does not allow");
+}
+
+// ---- 7) 密码哈希 (PBKDF2) ----
+{
+  const h = await __test.hashPassword("correct horse 9");
+  ok(h.startsWith("pbkdf2$100000$"), "hashPassword format pbkdf2$iter$salt$hash");
+  ok(await __test.verifyPassword("correct horse 9", h) === true, "verifyPassword: correct passes");
+  ok(await __test.verifyPassword("wrong password", h) === false, "verifyPassword: wrong fails");
+  ok(await __test.verifyPassword("correct horse 9", "garbage") === false, "verifyPassword: malformed stored fails closed");
+  const h2 = await __test.hashPassword("correct horse 9");
+  ok(h !== h2, "hashPassword: random salt -> different hashes");
 }
 
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nALL TESTS PASSED");
