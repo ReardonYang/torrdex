@@ -852,17 +852,23 @@ html[data-theme="flat"] .err{border-radius:3px}
 .tblwrap .mut{display:block;padding:14px 20px}
 /* 居中搜索 (2026-10-27: 搜索框撤出抬头栏回页面中央; 首页大号, 内页同组件) */
 .search-hero{display:flex;max-width:640px;margin:24px auto 4px;border:1px solid var(--field-border);background:var(--field-bg);box-shadow:var(--field-shadow);position:relative}
-.search-hero input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:16px;color:var(--ink);height:42px;padding:0 16px}
+.search-hero input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:16px;color:var(--ink);height:38px;padding:0 16px}
 .search-hero input::placeholder{color:var(--ph)}
 .search-hero button{flex:none;border:0;border-left:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);font-size:15px;padding:0 26px;cursor:pointer;font-family:inherit}
 .search-hero button:hover{background:var(--abtn-hover)}
-.search-hero.big input[type=search]{height:42px;font-size:16px}
+.search-hero.big input[type=search]{height:38px;font-size:16px}
 /* 收藏按钮 */
 .favbtn{flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow);padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:none}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
 .acct-btns{display:flex;gap:8px;align-items:center;flex:none}
+/* 统一区块行: 搜索框与登录/注册同排, 等高 (2026-10-27 用户定) */
+.hero-row{display:flex;gap:10px;justify-content:center;align-items:stretch;max-width:860px;margin:22px auto 4px}
+.hero-row .search-hero{flex:1 1 auto;max-width:640px;margin:0}
+.hero-row .acct-btns{align-items:stretch}
+.hero-row .acct-btn{display:flex;align-items:center}
+@media (max-width:734px){.hero-row{gap:8px}.hero-row .acct-btn{padding:6px 9px}}
 .acct-btn{font-size:12.5px;font-weight:600;padding:6px 13px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
 .acct-btn:hover{text-decoration:none;filter:brightness(1.04)}
 .acct-btn.primary{border-color:var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow)}
@@ -871,7 +877,7 @@ html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 .auth-card{max-width:420px;margin:30px auto}
 .auth-card .f-inp{margin:0 0 12px}
 .auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
-.auth-btn{width:100%;height:42px;border:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);box-shadow:var(--abtn-shadow);font-size:15px;cursor:pointer;font-family:inherit}
+.auth-btn{width:100%;height:38px;border:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);box-shadow:var(--abtn-shadow);font-size:15px;cursor:pointer;font-family:inherit}
 .auth-btn:hover{background:var(--abtn-hover)}
 /* 全站矩形 (2026-10-27 用户定: 控件与视觉一律不用圆角) */
 *,*::before,*::after{border-radius:0!important}
@@ -979,7 +985,7 @@ function heroHtml(stats, q) {
   return `<div class="hero"><h1>TorrDex</h1>
 <p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
 </div>
-${searchHeroHtml(q || "", true)}${stats ? `
+<div class="hero-row">${searchHeroHtml(q || "", true)}<span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span></div>${stats ? `
 <div class="stats-line">已索引 <b>${esc(fmtNum(stats.torrents))}</b> 条种子 · <b>${esc(fmtNum(stats.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(stats.alive))} 条 · 更新于 ${esc(updated)}</div>` : ""}`;
 }
 
@@ -999,7 +1005,6 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
 <nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
-<span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 <div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
 </div></header>
 <main class="wrap${center ? " center-main" : ""}">${nosearch ? "" : heroHtml(stats, q)}${!nosearch && ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1></div>` : ""}${body}</main>
