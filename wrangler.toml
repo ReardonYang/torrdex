@@ -1,0 +1,13 @@
+name = "torrdex"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+keep_vars = true
+
+[vars]
+TURSO_URL = "libsql://torrent-index-reardon.aws-ap-northeast-1.turso.io"
+
+# 部署：本仓库已连接 Cloudflare Workers Builds，推送到 main 分支即自动部署。
+# keep_vars = true 保证 Dashboard 里管理的变量/机密不被部署覆盖；
+# TURSO_TOKEN 是 Secret，只存在于 Dashboard（Worker Settings → Variables and Secrets），绝不写入本文件。
+# LOG_SALT（可选 Secret）— 搜索日志 IP 哈希的盐；不设时用代码内默认值。
