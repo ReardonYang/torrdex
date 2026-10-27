@@ -606,6 +606,16 @@ async function doList(env, kind, catCode, allowed) {
   return { kind, category: catCode || null, torrents: rows.map((r) => torrentJson(r, cats)) };
 }
 
+let _statsCache = { off: null, on: null };
+async function getStatsCached(env, allowed) {
+  const key = allowed ? "on" : "off";
+  const hit = _statsCache[key];
+  if (hit && Date.now() - hit.at < 60000) return hit.val;
+  const val = await doStats(env, allowed);
+  _statsCache[key] = { at: Date.now(), val };
+  return val;
+}
+
 async function doHome(env, allowed) {
   const [stats, trendRows, latest, top] = await Promise.all([
     doStats(env, allowed),
@@ -866,9 +876,8 @@ html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 全站矩形 (2026-10-27 用户定: 控件与视觉一律不用圆角) */
 *,*::before,*::after{border-radius:0!important}
 /* 分页头: 与首页同一布局语言 — 标题居中, 搜索在其下, 静态不重叠 (2026-10-27 晚定, 撤固定头) */
-.page-head{text-align:center;padding:30px 0 2px}
+.page-head{text-align:center;padding:12px 0 2px}
 .page-head .ptitle{margin:0}
-.page-head .search-hero{margin-top:18px}
 /* 分类页 热门/最新 段控 (与顶栏外观段控同一套变量, 风格统一) */
 .tabs-wrap{text-align:center;margin:18px 0 2px}
 .tabs{display:inline-flex;background:var(--seg-track);border:1px solid var(--seg-border);box-shadow:var(--seg-shadow);padding:2px;gap:2px}
@@ -963,6 +972,17 @@ if(favBtns.length){
 }
 `;
 
+// 全站统一头部区块 (2026-10-27 用户定: 除登录/注册外每页完全一样, 位置一致):
+// 站名大标题 + 标语 + 中央大搜索 + 统计行, 由 layout 统一渲染, 页面不得自备。
+function heroHtml(stats, q) {
+  const updated = stats && stats.updated_at ? fmtTime(stats.updated_at).slice(11, 16) : "--:--";
+  return `<div class="hero"><h1>TorrDex</h1>
+<p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
+</div>
+${searchHeroHtml(q || "", true)}${stats ? `
+<div class="stats-line">已索引 <b>${esc(fmtNum(stats.torrents))}</b> 条种子 · <b>${esc(fmtNum(stats.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(stats.alive))} 条 · 更新于 ${esc(updated)}</div>` : ""}`;
+}
+
 // 居中搜索组件 (2026-10-27: 搜索框只放页面中央, 不进抬头栏)
 function searchHeroHtml(q, big) {
   return `<form class="search-hero${big ? " big" : ""}" action="/search" method="get" role="search">` +
@@ -970,7 +990,7 @@ function searchHeroHtml(q, big) {
     `<button type="submit">搜索</button></form>`;
 }
 
-function layout({ title, body, adultOn, q, home, ptitle, nosearch, center }) {
+function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats }) {
   return `<!DOCTYPE html>
 <html lang="zh-CN" data-theme="jobs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -982,7 +1002,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center }) {
 <span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 <div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
 </div></header>
-<main class="wrap${center ? " center-main" : ""}">${home || nosearch ? "" : ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1>${searchHeroHtml(q || "")}</div>` : searchHeroHtml(q || "")}${body}</main>
+<main class="wrap${center ? " center-main" : ""}">${nosearch ? "" : heroHtml(stats, q)}${!nosearch && ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1></div>` : ""}${body}</main>
 <footer><div class="wrap">
 <a href="/about">数据口径</a><a href="/takedown">权利投诉</a>
 <button id="adult-toggle" class="chipbtn" type="button">成人分类：${adultOn ? "开" : "关"}</button>
@@ -1031,7 +1051,6 @@ function torrentRow(t, cats) {
 
 function pageHome(home, cats, adultOn) {
   const s = home.stats;
-  const updated = s.updated_at ? fmtTime(s.updated_at).slice(11, 16) : "--:--";
   const chips = home.trending.terms.map((t) =>
     `<a class="chip" href="/search?q=${encodeURIComponent(t.term)}${adultOn ? "&adult=1" : ""}">${esc(t.term)}</a>`).join("");
   const catCards = Object.entries(s.by_category || {}).map(([code, n]) => {
@@ -1039,18 +1058,13 @@ function pageHome(home, cats, adultOn) {
     return `<a class="chip" href="/browse/${esc(code)}">${esc(c ? c.name_zh : code)} ${esc(fmtNum(n))}</a>`;
   }).join("");
   const body = `
-<div class="hero"><h1>TorrDex</h1>
-<p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
-</div>
-${searchHeroHtml("", true)}
-<div class="stats-line">已索引 <b>${esc(fmtNum(s.torrents))}</b> 条种子 · <b>${esc(fmtNum(s.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(s.alive))} 条 · 更新于 ${esc(updated)}</div>
 ${home.trending.terms.length ? `<div class="chips">${chips}</div>` : ""}
 <section><h2 class="sec">分类</h2><div class="chips" style="justify-content:flex-start">${catCards}</div></section>
 <section><h2 class="sec">最新收录</h2>${home.latest.length ? `<div class="list">${home.latest.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>
 <section><h2 class="sec">热门种子</h2>${home.top.length ? `<div class="list">${home.top.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-  return layout({ title: "TorrDex — Torrent 全品类搜索", body, adultOn, home: true });
+  return layout({ title: "TorrDex — Torrent 全品类搜索", body, adultOn, stats: s });
 }
-function pageSearch(res, cats, adultOn, rawParams) {
+function pageSearch(res, cats, adultOn, rawParams, stats) {
   const p = rawParams;
   const catOpts = [`<option value="">全部分类</option>`].concat(cats
     .filter((c) => adultOn || c.policy !== "adult")
@@ -1115,10 +1129,10 @@ ${inner}
 <div class="pager">${res.page > 1 ? `<a href="${esc(qs({ page: res.page - 1 }))}">上一页</a>` : ""}
 <span class="cur">第 ${res.page} 页</span>
 ${res.torrents.length >= (res.page_size || 25) ? `<a href="${esc(qs({ page: res.page + 1 }))}">下一页</a>` : ""}</div>`;
-  return layout({ title: `${res.q} — 搜索结果`, body, adultOn, q: res.q });
+  return layout({ title: `${res.q} — 搜索结果`, body, adultOn, q: res.q, stats });
 }
 
-function pageTitle(data, cats, adultOn) {
+function pageTitle(data, cats, adultOn, stats) {
   const t = data.title;
   const ext = (t.external_ids || []).map((e) => {
     const url = e.source === "imdb" ? `https://www.imdb.com/title/${encodeURIComponent(e.external_id)}/` : null;
@@ -1155,10 +1169,10 @@ ${t.synopsis ? `<p style="margin-top:10px">${esc(t.synopsis)}</p>` : ""}
 </tr></thead><tbody>${rowsHtml || `<tr><td colspan="8" class="mut">暂无存活版本</td></tr>`}</tbody></table></div>
 <p class="mut">推荐依据（PRD §7.3）：健康分 ×0.5 + 做种项 ×0.3 + 规格命中（字幕/主流编码/1080p·2160p）×0.2。做种数为实测快照，悬停健康徽章可见抓取时间。</p>
 </section>`;
-  return layout({ title: `${t.canonical_title} — 作品页`, body, adultOn });
+  return layout({ title: `${t.canonical_title} — 作品页`, body, adultOn, stats });
 }
 
-function pageTorrent(data, cats, adultOn) {
+function pageTorrent(data, cats, adultOn, stats) {
   const t = data.torrent;
   const filesHtml = data.files.length
     ? `<table class="versions"><thead><tr><th>文件</th><th>大小</th></tr></thead><tbody>` +
@@ -1196,16 +1210,16 @@ ${t.group_name ? `<dt>发布组</dt><dd>${esc(t.group_name)}${t.group_verified ?
 <section><h2 class="sec">文件清单</h2><div class="tblwrap">${filesHtml}</div></section>
 <section><h2 class="sec">Tracker（${data.trackers.length} 个种子自带 + 公共列表）</h2>
 <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all">${data.trackers.map(esc).join("<br>") || '<span class="mut">无自带 tracker，磁力中已附公共 tracker 列表</span>'}</div></section>`;
-  return layout({ title: `${t.name} — 种子详情`, body, adultOn });
+  return layout({ title: `${t.name} — 种子详情`, body, adultOn, stats });
 }
 
-function pageList(listData, cats, adultOn, heading) {
+function pageList(listData, cats, adultOn, heading, stats) {
   const body = `<section>
 ${listData.torrents.length ? `<div class="list">${listData.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-  return layout({ title: heading, body, adultOn, ptitle: heading });
+  return layout({ title: heading, body, adultOn, ptitle: heading, stats });
 }
 
-function pageTakedown(adultOn) {
+function pageTakedown(adultOn, stats) {
   const body = `<section><div class="card">
 <h1 style="font-size:22px;font-weight:700;margin:0 0 10px">权利投诉 / 下架申请</h1>
 <p>如你是权利人或其代理人，请填写下表。我们将在收到后核查处理（目标 72 小时内），处理全程留痕（FR-ADM-02）。确认侵权的内容将被隐藏，作品页会显示「部分版本因投诉隐藏」。</p>
@@ -1220,10 +1234,10 @@ function pageTakedown(adultOn) {
 </dl>
 <p><button class="bigmag" type="submit">提交投诉</button></p></form>
 </div></section>`;
-  return layout({ title: "权利投诉", body, adultOn });
+  return layout({ title: "权利投诉", body, adultOn, stats });
 }
 
-function pageAbout(adultOn) {
+function pageAbout(adultOn, stats) {
   const body = `<section><div class="card">
 <h1 style="font-size:22px;font-weight:700;margin:0 0 10px">数据口径说明</h1>
 <dl class="kv">
@@ -1234,7 +1248,7 @@ function pageAbout(adultOn) {
 <dt>隐私</dt><dd>不接第三方统计与广告 SDK；搜索日志只记规范化查询词与结果数，IP 只存加盐哈希且 30 天滚动删除（FR-SRCH-04）。</dd>
 <dt>本站性质</dt><dd>只索引公开网络中的种子元数据（名称、大小、infohash），不托管、不分发任何文件本体。</dd>
 </dl></div></section>`;
-  return layout({ title: "数据口径", body, adultOn });
+  return layout({ title: "数据口径", body, adultOn, stats });
 }
 
 function htmlResp(html, status = 200) {
@@ -1363,7 +1377,7 @@ ${isLogin ? "" : `<label>再输一次密码</label><input class="f-inp" type="pa
   return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn, nosearch: true, center: true });
 }
 
-function pageAccount(user, adultOn) {
+function pageAccount(user, adultOn, stats) {
   const body = `<section>
 <div class="card">
 <div style="font-size:16px;font-weight:600">${esc(user.email)}</div>
@@ -1379,7 +1393,7 @@ function pageAccount(user, adultOn) {
 <form method="post" action="/account/delete" onsubmit="return confirm('确定注销账号？此操作不可恢复。')">
 <button class="favbtn" type="submit" style="color:#b3261e;border-color:#b3261e">注销账号</button></form>
 </div></section>`;
-  return layout({ title: "我的账号 — TorrDex", body, adultOn, ptitle: "我的账号" });
+  return layout({ title: "我的账号 — TorrDex", body, adultOn, ptitle: "我的账号", stats });
 }
 
 // ---------------- 路由 ----------------
@@ -1389,11 +1403,12 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const allowed = adultAllowed(request, url);
+    let heroStats = null;
     try {
       if (!env.TURSO_URL || !env.TURSO_TOKEN) {
         const msg = { error: "server_not_configured" };
         return path.startsWith("/api/") ? jsonResp(msg, 503)
-          : htmlResp(layout({ title: "未配置", body: `<div class="err">服务器尚未配置数据库凭据（TURSO_URL / TURSO_TOKEN）。请按 README 完成部署步骤。</div>`, adultOn: false }), 503);
+          : htmlResp(layout({ title: "未配置", body: `<div class="err">服务器尚未配置数据库凭据（TURSO_URL / TURSO_TOKEN）。请按 README 完成部署步骤。</div>`, adultOn: false, nosearch: true }), 503);
       }
 
       // ---------- API ----------
@@ -1441,7 +1456,7 @@ export default {
                  String(form.get("infohash") || "").slice(0, 40) || null, String(form.get("url") || "").slice(0, 500) || null,
                  String(form.get("note") || "").slice(0, 1000) || null],
         }]);
-        return htmlResp(layout({ title: "已提交", body: `<div class="card"><b>投诉已提交</b><p class="mut">我们会核查处理（目标 72 小时），处理结果将通过你留下的联系方式反馈。</p><p><a href="/">回首页</a></p></div>`, adultOn: allowed }));
+        return htmlResp(layout({ title: "已提交", body: `<div class="card"><b>投诉已提交</b><p class="mut">我们会核查处理（目标 72 小时），处理结果将通过你留下的联系方式反馈。</p><p><a href="/">回首页</a></p></div>`, adultOn: allowed, stats: await getStatsCached(env, allowed) }));
       }
       if (path === "/api/favorites/ids") {
         const user = await getUser(env, request);
@@ -1469,6 +1484,7 @@ export default {
 
       // ---------- 页面 ----------
       const cats = await getCategories(env);
+      heroStats = await getStatsCached(env, allowed);
       if (path === "/") {
         const home = await doHome(env, allowed);
         return htmlResp(pageHome(home, cats, allowed));
@@ -1488,34 +1504,34 @@ export default {
           ]).catch(() => {});
           if (ctx && ctx.waitUntil) ctx.waitUntil(hp);
         }
-        return htmlResp(pageSearch(res, cats, allowed, params));
+        return htmlResp(pageSearch(res, cats, allowed, params, heroStats));
       }
       const titleMatch = path.match(/^\/title\/(?:.*-)?(\d+)$/);
       if (titleMatch) {
         const data = await doTitle(env, parseInt(titleMatch[1], 10), allowed);
-        return data ? htmlResp(pageTitle(data, cats, allowed))
-          : htmlResp(layout({ title: "未找到", body: `<div class="err">作品不存在或不可见。</div>`, adultOn: allowed }), 404);
+        return data ? htmlResp(pageTitle(data, cats, allowed, heroStats))
+          : htmlResp(layout({ title: "未找到", body: `<div class="err">作品不存在或不可见。</div>`, adultOn: allowed, stats: heroStats }), 404);
       }
       const torMatch = path.match(/^\/torrent\/([0-9a-fA-F]{40})$/);
       if (torMatch) {
         const data = await doTorrent(env, torMatch[1].toLowerCase(), allowed);
-        return data ? htmlResp(pageTorrent(data, cats, allowed))
-          : htmlResp(layout({ title: "未找到", body: `<div class="err">种子不存在或不可见。</div>`, adultOn: allowed }), 404);
+        return data ? htmlResp(pageTorrent(data, cats, allowed, heroStats))
+          : htmlResp(layout({ title: "未找到", body: `<div class="err">种子不存在或不可见。</div>`, adultOn: allowed, stats: heroStats }), 404);
       }
-      if (path === "/top") return htmlResp(pageList(await doList(env, "top", url.searchParams.get("cat"), allowed), cats, allowed, "Top 20 热门种子"));
-      if (path === "/latest") return htmlResp(pageList(await doList(env, "latest", url.searchParams.get("cat"), allowed), cats, allowed, "最新收录"));
+      if (path === "/top") return htmlResp(pageList(await doList(env, "top", url.searchParams.get("cat"), allowed), cats, allowed, "Top 20 热门种子", heroStats));
+      if (path === "/latest") return htmlResp(pageList(await doList(env, "latest", url.searchParams.get("cat"), allowed), cats, allowed, "最新收录", heroStats));
       const browseMatch = path.match(/^\/browse\/([a-z]+)$/);
       if (browseMatch) {
         const c = catByCode(cats, browseMatch[1]);
         if (!c || (!allowed && c.policy === "adult")) {
-          return htmlResp(layout({ title: "未找到", body: `<div class="err">分类不存在或不可见。</div>`, adultOn: allowed }), 404);
+          return htmlResp(layout({ title: "未找到", body: `<div class="err">分类不存在或不可见。</div>`, adultOn: allowed, stats: heroStats }), 404);
         }
         const tab = url.searchParams.get("tab") === "latest" ? "latest" : "top";
         const data = await doList(env, tab, c.code, allowed);
         const body = `<section>
 <div class="tabs-wrap"><span class="tabs"><a href="/browse/${c.code}?tab=top"${tab === "top" ? ` class="on"` : ""}>热门</a><a href="/browse/${c.code}?tab=latest"${tab === "latest" ? ` class="on"` : ""}>最新收录</a></span></div>
 ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · ${tab === "latest" ? "最新收录" : "热门"}` }));
+        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · ${tab === "latest" ? "最新收录" : "热门"}`, stats: heroStats }));
       }
       if (path === "/register" || path === "/login") {
         const isLogin = path === "/login";
@@ -1559,7 +1575,7 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
       if (path === "/account") {
         const user = await getUser(env, request);
         if (!user) return redirectResp("/login?next=/account");
-        return htmlResp(pageAccount(user, allowed));
+        return htmlResp(pageAccount(user, allowed, heroStats));
       }
       if (path === "/account/delete" && request.method === "POST") {
         const user = await getUser(env, request);
@@ -1581,7 +1597,7 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
         const body = `<section>${favList.length
           ? `<div class="list">${favList.map((t) => torrentRow(t, cats)).join("")}</div>${favList.length >= 20 ? `<div class="mut" style="margin-top:10px">仅显示最近 20 条收藏。</div>` : ""}`
           : `<div class="mut">还没有收藏。在种子行或详情页点「☆ 收藏」即可加入。</div>`}</section>`;
-        return htmlResp(layout({ title: "我的收藏 — TorrDex", body, adultOn: allowed, ptitle: "我的收藏" }));
+        return htmlResp(layout({ title: "我的收藏 — TorrDex", body, adultOn: allowed, ptitle: "我的收藏", stats: heroStats }));
       }
       if (path === "/history") {
         const user = await getUser(env, request);
@@ -1595,17 +1611,17 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
         const body = `<section>${rows.length
           ? `<div class="list">${items}</div><form method="post" action="/history" style="margin-top:14px" onsubmit="return confirm('清空全部搜索历史？')"><button class="favbtn" type="submit">清空历史</button></form>`
           : `<div class="mut">暂无搜索记录。登录状态下搜索会自动记录到这里。</div>`}</section>`;
-        return htmlResp(layout({ title: "搜索历史 — TorrDex", body, adultOn: allowed, ptitle: "搜索历史" }));
+        return htmlResp(layout({ title: "搜索历史 — TorrDex", body, adultOn: allowed, ptitle: "搜索历史", stats: heroStats }));
       }
-      if (path === "/takedown") return htmlResp(pageTakedown(allowed));
-      if (path === "/about" || path === "/dmca" || path === "/faq") return htmlResp(pageAbout(allowed));
-      return htmlResp(layout({ title: "404", body: `<div class="err">页面不存在。<a href="/">回首页</a></div>`, adultOn: allowed }), 404);
+      if (path === "/takedown") return htmlResp(pageTakedown(allowed, heroStats));
+      if (path === "/about" || path === "/dmca" || path === "/faq") return htmlResp(pageAbout(allowed, heroStats));
+      return htmlResp(layout({ title: "404", body: `<div class="err">页面不存在。<a href="/">回首页</a></div>`, adultOn: allowed, stats: heroStats }), 404);
     } catch (err) {
       // 不外泄 SQL/内部信息 (仅服务端日志)
       console.error("worker_error", err && err.message);
       return path.startsWith("/api/")
         ? jsonResp({ error: "internal_error" }, 500)
-        : htmlResp(layout({ title: "出错了", body: `<div class="err">服务器内部错误，请稍后再试。</div>`, adultOn: false }), 500);
+        : htmlResp(layout({ title: "出错了", body: `<div class="err">服务器内部错误，请稍后再试。</div>`, adultOn: false, stats: heroStats }), 500);
     }
   },
 };
