@@ -732,9 +732,11 @@ header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);bo
 .top nav{display:flex;gap:20px;font-size:12.5px;white-space:nowrap;margin-left:auto}
 .top nav a{color:var(--nav-ink);opacity:.85}
 .top nav a:hover{opacity:1;text-decoration:none}
-.seg{display:flex;flex:none;background:var(--seg-track);border:1px solid var(--seg-border);border-radius:var(--seg-radius);box-shadow:var(--seg-shadow);padding:2px;gap:2px}
-.seg button{border:0;background:transparent;color:var(--seg-ink);font-size:12px;line-height:1;padding:5px 11px;border-radius:var(--seg-radius);cursor:pointer;font-family:inherit}
-html[data-theme="jobs"] .seg [data-th="jobs"],html[data-theme="flat"] .seg [data-th="flat"]{background:var(--seg-on-bg);color:var(--seg-on-ink);box-shadow:var(--seg-on-shadow);font-weight:600}
+.seg{display:flex;flex:none;align-items:center;gap:0;padding:0}
+.seg button{border:0;background:transparent;color:var(--nav-ink);opacity:.6;font-size:11px;line-height:1;padding:4px 6px;cursor:pointer;font-family:inherit}
+.seg button:first-child{border-right:1px solid rgba(140,140,148,.45)}
+.seg button:hover{opacity:1}
+html[data-theme="jobs"] .seg [data-th="jobs"],html[data-theme="flat"] .seg [data-th="flat"]{background:transparent;color:var(--logo-ink);opacity:1;box-shadow:none;font-weight:700}
 .hero{padding:72px 0 4px;text-align:center}
 .hero h1{font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-.018em;margin:0}
 html[data-theme="flat"] .hero h1{font-weight:200;letter-spacing:.14em;text-shadow:none}
@@ -862,22 +864,15 @@ html[data-theme="flat"] .err{border-radius:3px}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
-.acct-btns{display:flex;gap:0;align-items:stretch;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);box-shadow:var(--chip-shadow)}
+.acct-btns{display:flex;gap:0;align-items:stretch;flex:none;height:28px;border:1px solid var(--chip-border);background:var(--chip-bg);box-shadow:var(--chip-shadow)}
 .acct-btns.solo{border:0;background:transparent;box-shadow:none}
-.hero-sep{width:1px;background:var(--surface-border);margin:5px 2px;flex:none}
-.avatar-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
+.avatar-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
 .avatar-btn:hover{text-decoration:none;filter:brightness(1.05)}
-/* 统一区块行: 搜索框与登录/注册同排, 等高 (2026-10-27 用户定) */
-.hero-row{display:flex;gap:10px;justify-content:center;align-items:stretch;max-width:860px;margin:22px auto 4px}
-.hero-row .search-hero{flex:1 1 auto;max-width:640px;margin:0}
-.hero-row .acct-btns{align-items:stretch}
-.hero-row .acct-btn{display:flex;align-items:center}
-@media (max-width:734px){.hero-row{gap:8px}.hero-row .acct-btn{padding:6px 9px}}
-.acct-btn{display:flex;align-items:center;font-size:12.5px;font-weight:600;padding:6px 13px;white-space:nowrap;color:var(--chip-ink)}
+@media (max-width:734px){.acct-btn{padding:0 8px}}
+.acct-btn{display:flex;align-items:center;font-size:12px;font-weight:600;padding:0 11px;white-space:nowrap;color:var(--chip-ink)}
 .acct-btn:hover{text-decoration:none;filter:brightness(1.04)}
 .acct-btn.primary{border-left:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow)}
 .acct-btn.primary:hover{background:var(--btn-hover)}
-@media (max-width:734px){.acct-btn{padding:6px 9px;font-size:12px}}
 .auth-card{max-width:420px;margin:30px auto}
 .auth-card .f-inp{margin:0 0 12px}
 .auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
@@ -888,12 +883,6 @@ html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 分页头: 与首页同一布局语言 — 标题居中, 搜索在其下, 静态不重叠 (2026-10-27 晚定, 撤固定头) */
 .page-head{text-align:center;padding:12px 0 2px}
 .page-head .ptitle{margin:0}
-/* 分类页 热门/最新 段控 (与顶栏外观段控同一套变量, 风格统一) */
-.tabs-wrap{text-align:center;margin:18px 0 2px}
-.tabs{display:inline-flex;background:var(--seg-track);border:1px solid var(--seg-border);box-shadow:var(--seg-shadow);padding:2px;gap:2px}
-.tabs a{padding:6px 20px;font-size:13px;line-height:1.25;color:var(--seg-ink)}
-.tabs a:hover{text-decoration:none}
-.tabs a.on{background:var(--seg-on-bg);color:var(--seg-on-ink);box-shadow:var(--seg-on-shadow);font-weight:600}
 /* 登录/注册: 卡片在主区正中 */
 .center-main{display:flex;align-items:center;justify-content:center}
 .center-main .auth-card{margin:0;width:100%}
@@ -963,7 +952,7 @@ if(at){ at.addEventListener('click',function(){
 // 账号入口: td_user 仅供显示, 登录态以 HttpOnly 的 td_session 为准
 var acct=document.getElementById('acct-btns');
 var mu=document.cookie.match(/(?:^|;\\s*)td_user=([^;]*)/);
-if(acct&&mu){ acct.innerHTML=''; acct.classList.add('solo'); var aa=document.createElement('a'); aa.className='avatar-btn'; aa.href='/account'; aa.title=decodeURIComponent(mu[1]); aa.setAttribute('aria-label','我的账号'); aa.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21.5v-1c0-3.9 3.6-6 8-6s8 2.1 8 6v1H4z"/></svg>'; acct.appendChild(aa); }
+if(acct&&mu){ acct.innerHTML=''; acct.classList.add('solo'); var aa=document.createElement('a'); aa.className='avatar-btn'; aa.href='/account'; aa.title=decodeURIComponent(mu[1]); aa.setAttribute('aria-label','我的账号'); aa.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21.5v-1c0-3.9 3.6-6 8-6s8 2.1 8 6v1H4z"/></svg>'; acct.appendChild(aa); }
 // 收藏: 状态由 /api/favorites/ids 回填; 未登录点击跳登录页
 var favBtns=document.querySelectorAll('[data-fav]');
 if(favBtns.length){
@@ -989,7 +978,7 @@ function heroHtml(stats, q) {
   return `<div class="hero"><h1>TorrDex</h1>
 <p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
 </div>
-<div class="hero-row">${searchHeroHtml(q || "", true)}<span class="hero-sep" aria-hidden="true"></span><span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span></div>${stats ? `
+${searchHeroHtml(q || "", true)}${stats ? `
 <div class="stats-line">已索引 <b>${esc(fmtNum(stats.torrents))}</b> 条种子 · <b>${esc(fmtNum(stats.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(stats.alive))} 条 · 更新于 ${esc(updated)}</div>` : ""}`;
 }
 
@@ -1010,6 +999,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <a class="logo" href="/">TorrDex</a>
 <nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
 <div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
+<span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 </div></header>
 <main class="wrap${center ? " center-main" : ""}">${nosearch ? "" : heroHtml(stats, q)}${!nosearch && ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1></div>` : ""}${body}</main>
 <footer><div class="wrap">
@@ -1535,12 +1525,10 @@ export default {
         if (!c || (!allowed && c.policy === "adult")) {
           return htmlResp(layout({ title: "未找到", body: `<div class="err">分类不存在或不可见。</div>`, adultOn: allowed, stats: heroStats }), 404);
         }
-        const tab = url.searchParams.get("tab") === "latest" ? "latest" : "top";
-        const data = await doList(env, tab, c.code, allowed);
+        const data = await doList(env, "latest", c.code, allowed);
         const body = `<section>
-<div class="tabs-wrap"><span class="tabs"><a href="/browse/${c.code}?tab=top"${tab === "top" ? ` class="on"` : ""}>热门</a><a href="/browse/${c.code}?tab=latest"${tab === "latest" ? ` class="on"` : ""}>最新收录</a></span></div>
 ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · ${tab === "latest" ? "最新收录" : "热门"}`, stats: heroStats }));
+        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · 最新收录`, stats: heroStats }));
       }
       if (path === "/register" || path === "/login") {
         const isLogin = path === "/login";
