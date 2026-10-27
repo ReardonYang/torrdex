@@ -9,7 +9,7 @@
 
 // ---------------- 常量 ----------------
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;   // 每页条数 (2026-10-27 用户定: 所有列表一律最多 20 条)
 const RECALL_LIMIT = 200;          // §10.3: 召回 Top-200 后应用层重排
 
 const PUBLIC_TRACKERS = [
@@ -598,7 +598,7 @@ async function doList(env, kind, catCode, allowed) {
   const filters = { catId: catCode ? (catByCode(cats, catCode)?.id ?? -1) : null, resolution: null, health: null };
   const args = [];
   const order = kind === "latest" ? "t.first_seen_at DESC" : "t.popularity_7d DESC, t.seeders DESC";
-  const limit = kind === "latest" ? 50 : 100;
+  const limit = 20;   // 列表页上限 20 条 (2026-10-27 用户定, 不再 50/100)
   const sql = `SELECT ${TOR_COLS} ${TOR_JOIN} WHERE t.status = 'active'` +
     adultSql("t", allowed) + filterSql(filters, args) + ` ORDER BY ${order} LIMIT ?`;
   args.push(limit);
@@ -663,9 +663,9 @@ function jsonResp(data, status = 200) {
 
 const CSS = `
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;color-scheme:light;
+html{scrollbar-gutter:stable;-webkit-text-size-adjust:100%;color-scheme:light;
 --bg:#f5f5f6;--bgimg:linear-gradient(#ffffff,#efeff1);
---ink:#1d1d1f;--mut:#6e6e73;--faint:#98989e;--link:#0066cc;
+--ink:#1d1d1f;--mut:#6e6e73;--faint:#86868b;--link:#0066cc;
 --bar-bg:linear-gradient(#545456,#333335 50%,#242426 50%,#2e2e30);--bar-border:#101012;
 --bar-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.4),0 1px 5px rgba(0,0,0,.28);
 --logo-ink:#ffffff;--logo-shadow:0 -1px 0 rgba(0,0,0,.55);--nav-ink:#d9d9de;
@@ -677,6 +677,7 @@ html{-webkit-text-size-adjust:100%;color-scheme:light;
 --btn-bg:linear-gradient(#74bcff,#2f8bf6 48%,#1171e8 52%,#0a63d8);--btn-border:#0a4da6;--btn-ink:#fff;
 --btn-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -10px 16px rgba(255,255,255,.16),0 1px 3px rgba(0,0,0,.28);
 --btn-tshadow:0 -1px 0 rgba(0,30,80,.45);--btn-hover:linear-gradient(#85c6ff,#43a0ff 48%,#2280f2 52%,#1070e2);--btn-active:linear-gradient(#4aa3f5,#1c78e8 48%,#0d63cc 52%,#0a56b4);
+--abtn-bg:linear-gradient(#6a6a6e,#434347 50%,#35353a 50%,#2c2c30);--abtn-border:#1c1c1f;--abtn-ink:#fff;--abtn-hover:linear-gradient(#78787e,#4e4e53 50%,#404046 50%,#36363b);--abtn-tshadow:0 -1px 0 rgba(0,0,0,.5);--abtn-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 1px 2px rgba(0,0,0,.25);
 --chip-bg:linear-gradient(#ffffff,#ededf0);--chip-border:#9d9da3;--chip-shadow:0 1px 1px rgba(0,0,0,.10),inset 0 1px 0 #fff;--chip-ink:#26262a;
 --tag-bg:#f2f2f4;--tag-border:#d4d4d8;--tag-ink:#6e6e73;
 --sel-bg:linear-gradient(#ffffff,#ececf0);
@@ -698,6 +699,7 @@ html[data-theme="flat"]{color-scheme:dark;
 --row-sep:rgba(255,255,255,.09);--row-hover:rgba(255,255,255,.045);
 --slot-bg:transparent;--slot-border:rgba(255,255,255,.30);--slot-shadow:none;--slot-ring:0 0 0 1px rgba(255,255,255,.8);--ph:#5f5f66;
 --btn-bg:#f4f4f6;--btn-border:#f4f4f6;--btn-ink:#000;--btn-shadow:none;--btn-tshadow:none;--btn-hover:#ffffff;--btn-active:#d8d8de;
+--abtn-bg:#2e2e34;--abtn-border:rgba(255,255,255,.28);--abtn-ink:#f4f4f6;--abtn-hover:#3a3a41;--abtn-tshadow:none;--abtn-shadow:none;
 --chip-bg:transparent;--chip-border:rgba(255,255,255,.25);--chip-shadow:none;--chip-ink:#e8e8ec;
 --tag-bg:transparent;--tag-border:rgba(255,255,255,.22);--tag-ink:#a2a2aa;
 --sel-bg:#0b0b0d;--field-bg:#0b0b0d;--field-border:rgba(255,255,255,.25);--field-shadow:none;
@@ -709,6 +711,8 @@ html[data-theme="flat"]{color-scheme:dark;
 --spark-bg:#e8e8ec;--foot-border:rgba(255,255,255,.14);
 --seg-track:transparent;--seg-border:rgba(255,255,255,.32);--seg-shadow:none;--seg-on-bg:#f4f4f6;--seg-on-shadow:none;--seg-ink:#a2a2aa;--seg-on-ink:#000;--seg-radius:2px}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;background-color:var(--bg);background-image:var(--bgimg);background-attachment:fixed;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{display:flex;flex-direction:column;min-height:100vh}
+main{flex:1 0 auto;width:100%}
 a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 .wrap{max-width:980px;margin:0 auto;padding:0 22px}
 header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);box-shadow:var(--bar-shadow);-webkit-backdrop-filter:saturate(160%) blur(14px);backdrop-filter:saturate(160%) blur(14px);position:sticky;top:0;z-index:20}
@@ -838,24 +842,36 @@ html[data-theme="flat"] .err{border-radius:3px}
 .tblwrap .mut{display:block;padding:14px 20px}
 /* 居中搜索 (2026-10-27: 搜索框撤出抬头栏回页面中央; 首页大号, 内页同组件) */
 .search-hero{display:flex;max-width:640px;margin:24px auto 4px;border:1px solid var(--field-border);background:var(--field-bg);box-shadow:var(--field-shadow);position:relative}
-.search-hero input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:16px;color:var(--ink);height:48px;padding:0 16px}
+.search-hero input[type=search]{flex:1;min-width:0;border:0;background:transparent;outline:0;font-size:16px;color:var(--ink);height:42px;padding:0 16px}
 .search-hero input::placeholder{color:var(--ph)}
-.search-hero button{flex:none;border:0;border-left:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);font-size:15px;padding:0 26px;cursor:pointer;font-family:inherit}
-.search-hero button:hover{background:var(--btn-hover)}
-.search-hero.big input[type=search]{height:54px;font-size:17px}
+.search-hero button{flex:none;border:0;border-left:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);font-size:15px;padding:0 26px;cursor:pointer;font-family:inherit}
+.search-hero button:hover{background:var(--abtn-hover)}
+.search-hero.big input[type=search]{height:42px;font-size:16px}
 /* 收藏按钮 */
 .favbtn{flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow);padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:none}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
-.acct-link{font-size:12.5px;color:var(--nav-ink);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.acct-link{font-size:12.5px;font-weight:600;color:var(--slot-ink);background:var(--slot-bg);border:1px solid var(--slot-border);box-shadow:var(--slot-shadow);padding:6px 13px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.acct-link:hover{text-decoration:none;filter:brightness(1.3)}
 .auth-card{max-width:420px;margin:30px auto}
 .auth-card .f-inp{margin:0 0 12px}
 .auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
-.auth-btn{width:100%;height:42px;border:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow);font-size:15px;cursor:pointer;font-family:inherit}
-.auth-btn:hover{background:var(--btn-hover)}
+.auth-btn{width:100%;height:42px;border:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);box-shadow:var(--abtn-shadow);font-size:15px;cursor:pointer;font-family:inherit}
+.auth-btn:hover{background:var(--abtn-hover)}
 /* 全站矩形 (2026-10-27 用户定: 控件与视觉一律不用圆角) */
 *,*::before,*::after{border-radius:0!important}
+/* 分页固定头: 标题 + 居中搜索滚动时固定在顶栏之下 (2026-10-27) */
+.stickybar{position:sticky;top:52px;z-index:15;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 0 10px;background-color:var(--bg);background-image:var(--bgimg);border-bottom:1px solid var(--row-sep)}
+.stickybar .ptitle{margin:0;font-size:22px;flex:none}
+.wrap .stickybar .search-hero{position:static;flex:1 1 260px;margin:0}
+/* 无标题页 (详情/作品/结果) 的搜索条自身固定 */
+.search-hero:not(.big){position:sticky;top:62px;z-index:14}
+@media (max-width:734px){.stickybar .ptitle{font-size:18px}}
+/* 细节 (Rams: 少但是更好; Jobs: 设计是它如何运作) */
+::selection{background:rgba(0,102,204,.16)}
+:focus-visible{outline:2px solid var(--link);outline-offset:1px}
+*{-webkit-tap-highlight-color:transparent}
 `;
 
 const CLIENT_JS = `
@@ -944,7 +960,7 @@ function searchHeroHtml(q, big) {
     `<button type="submit">搜索</button></form>`;
 }
 
-function layout({ title, body, adultOn, q, home }) {
+function layout({ title, body, adultOn, q, home, ptitle, nosearch }) {
   return `<!DOCTYPE html>
 <html lang="zh-CN" data-theme="jobs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -952,15 +968,14 @@ function layout({ title, body, adultOn, q, home }) {
 <body>
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
-<nav><a href="/top">Top100</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
+<nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
 <a class="acct-link" id="acct-link" href="/login">登录</a>
-<div class="seg" role="group" aria-label="视觉风格"><button type="button" data-th="jobs">实体</button><button type="button" data-th="flat">扁平</button></div>
+<div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
 </div></header>
-<main class="wrap">${home ? "" : searchHeroHtml(q || "")}${body}</main>
+<main class="wrap">${home || nosearch ? "" : ptitle ? `<div class="stickybar"><h1 class="ptitle">${esc(ptitle)}</h1>${searchHeroHtml(q || "")}</div>` : searchHeroHtml(q || "")}${body}</main>
 <footer><div class="wrap">
 <a href="/about">数据口径</a><a href="/takedown">权利投诉</a>
 <button id="adult-toggle" class="chipbtn" type="button">成人分类：${adultOn ? "开" : "关"}</button>
-<span class="toggle">默认关闭，需主动开启（含年龄确认）</span>
 <div style="margin-top:8px">本站只索引公开网络中的种子元数据，不托管任何文件本体。做种/下载数为实测快照并标注抓取时间，无数据时显示「未知」。</div>
 </div></footer>
 <script>${CLIENT_JS}</script>
@@ -1175,9 +1190,9 @@ ${t.group_name ? `<dt>发布组</dt><dd>${esc(t.group_name)}${t.group_verified ?
 }
 
 function pageList(listData, cats, adultOn, heading) {
-  const body = `<section><h1 class="ptitle">${esc(heading)}</h1>
+  const body = `<section>
 ${listData.torrents.length ? `<div class="list">${listData.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-  return layout({ title: heading, body, adultOn });
+  return layout({ title: heading, body, adultOn, ptitle: heading });
 }
 
 function pageTakedown(adultOn) {
@@ -1335,11 +1350,11 @@ ${isLogin ? "" : `<label>再输一次密码</label><input class="f-inp" type="pa
   ? `还没有账号？<a href="/register?next=${encodeURIComponent(next || "/")}">注册</a>`
   : `已有账号？<a href="/login?next=${encodeURIComponent(next || "/")}">直接登录</a>`}</p>
 </div>`;
-  return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn });
+  return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn, nosearch: true });
 }
 
 function pageAccount(user, adultOn) {
-  const body = `<section><h1 class="ptitle">我的账号</h1>
+  const body = `<section>
 <div class="card">
 <div style="font-size:16px;font-weight:600">${esc(user.email)}</div>
 <div class="mut" style="margin-top:4px">注册于 ${esc(fmtTime(user.created_at))}</div>
@@ -1354,7 +1369,7 @@ function pageAccount(user, adultOn) {
 <form method="post" action="/account/delete" onsubmit="return confirm('确定注销账号？此操作不可恢复。')">
 <button class="favbtn" type="submit" style="color:#b3261e;border-color:#b3261e">注销账号</button></form>
 </div></section>`;
-  return layout({ title: "我的账号 — TorrDex", body, adultOn });
+  return layout({ title: "我的账号 — TorrDex", body, adultOn, ptitle: "我的账号" });
 }
 
 // ---------------- 路由 ----------------
@@ -1477,7 +1492,7 @@ export default {
         return data ? htmlResp(pageTorrent(data, cats, allowed))
           : htmlResp(layout({ title: "未找到", body: `<div class="err">种子不存在或不可见。</div>`, adultOn: allowed }), 404);
       }
-      if (path === "/top") return htmlResp(pageList(await doList(env, "top", url.searchParams.get("cat"), allowed), cats, allowed, "Top 100 热门种子"));
+      if (path === "/top") return htmlResp(pageList(await doList(env, "top", url.searchParams.get("cat"), allowed), cats, allowed, "Top 20 热门种子"));
       if (path === "/latest") return htmlResp(pageList(await doList(env, "latest", url.searchParams.get("cat"), allowed), cats, allowed, "最新收录"));
       const browseMatch = path.match(/^\/browse\/([a-z]+)$/);
       if (browseMatch) {
@@ -1487,10 +1502,10 @@ export default {
         }
         const tab = url.searchParams.get("tab") === "latest" ? "latest" : "top";
         const data = await doList(env, tab, c.code, allowed);
-        const body = `<section><h1 class="ptitle">${esc(c.name_zh)} · ${tab === "latest" ? "最新收录" : "热门"}</h1>
+        const body = `<section>
 <p class="mut"><a href="/browse/${c.code}?tab=${tab === "latest" ? "top" : "latest"}">切换到${tab === "latest" ? "热门" : "最新"}</a></p>
 ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
-        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed }));
+        return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · ${tab === "latest" ? "最新收录" : "热门"}` }));
       }
       if (path === "/register" || path === "/login") {
         const isLogin = path === "/login";
@@ -1551,12 +1566,12 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
         const user = await getUser(env, request);
         if (!user) return redirectResp("/login?next=/favorites");
         const rows = await q1(env, `SELECT ${TOR_COLS} ${TOR_JOIN} JOIN user_favorites f ON f.infohash = t.infohash
-          WHERE f.user_id = ? AND t.status = 'active'` + adultSql("t", allowed) + " ORDER BY f.created_at DESC LIMIT 200", [user.id]);
+          WHERE f.user_id = ? AND t.status = 'active'` + adultSql("t", allowed) + " ORDER BY f.created_at DESC LIMIT 20", [user.id]);
         const favList = rows.map((r) => torrentJson(r, cats));
-        const body = `<section><h1 class="ptitle">我的收藏</h1>${favList.length
-          ? `<div class="list">${favList.map((t) => torrentRow(t, cats)).join("")}</div>`
+        const body = `<section>${favList.length
+          ? `<div class="list">${favList.map((t) => torrentRow(t, cats)).join("")}</div>${favList.length >= 20 ? `<div class="mut" style="margin-top:10px">仅显示最近 20 条收藏。</div>` : ""}`
           : `<div class="mut">还没有收藏。在种子行或详情页点「☆ 收藏」即可加入。</div>`}</section>`;
-        return htmlResp(layout({ title: "我的收藏 — TorrDex", body, adultOn: allowed }));
+        return htmlResp(layout({ title: "我的收藏 — TorrDex", body, adultOn: allowed, ptitle: "我的收藏" }));
       }
       if (path === "/history") {
         const user = await getUser(env, request);
@@ -1567,10 +1582,10 @@ ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRo
         }
         const rows = await q1(env, "SELECT query_raw, result_count, created_at FROM user_search_history WHERE user_id = ? ORDER BY id DESC LIMIT 100", [user.id]);
         const items = rows.map((r) => `<div class="row2"><div class="r1"><a class="nm" href="/search?q=${encodeURIComponent(r.query_raw)}">${esc(r.query_raw)}</a></div><div class="r2"><span>${esc(fmtNum(r.result_count))} 条结果</span><span>${esc(fmtTime(r.created_at))}</span></div></div>`).join("");
-        const body = `<section><h1 class="ptitle">搜索历史</h1>${rows.length
+        const body = `<section>${rows.length
           ? `<div class="list">${items}</div><form method="post" action="/history" style="margin-top:14px" onsubmit="return confirm('清空全部搜索历史？')"><button class="favbtn" type="submit">清空历史</button></form>`
           : `<div class="mut">暂无搜索记录。登录状态下搜索会自动记录到这里。</div>`}</section>`;
-        return htmlResp(layout({ title: "搜索历史 — TorrDex", body, adultOn: allowed }));
+        return htmlResp(layout({ title: "搜索历史 — TorrDex", body, adultOn: allowed, ptitle: "搜索历史" }));
       }
       if (path === "/takedown") return htmlResp(pageTakedown(allowed));
       if (path === "/about" || path === "/dmca" || path === "/faq") return htmlResp(pageAbout(allowed));
