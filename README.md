@@ -8,27 +8,27 @@ HTML/CSS/JS 全部内嵌。数据在 Turso（libSQL），Worker 只通过 HTTP `
 
 配套文档：`../PRD-v1.md`（§6 FR / §7 排序与健康分 / §11 接口）、`../data-model-sqlite.sql`（§10.3 查询口径）。
 
-## 部署（Dashboard 路线，无 wrangler 授权时用这条）
+## 部署（Git 路线，现行）
 
-1. **建 Turso 只读令牌**（给 Worker 用，与爬虫的读写令牌分开）：
-   - 打开 Turso 控制台 → 选数据库 `torrent-index` → 右上「…」/ Connect → **Create Token**，
-     过期时间选不过期或 90 天，权限如有选项选 **Read-only**；或在装了 Turso CLI 的机器上：
-     `turso db tokens create torrent-index --read-only`（以控制台实际选项为准）。
-   - 令牌只显示一次，直接粘到下一步的 Secret 里，不要经聊天/文档中转。
-2. **建 Worker**：Cloudflare Dashboard → Workers & Pages → Create Worker，命名 `torrent-search`
-   （与 `wrangler.toml` 一致）→ Deploy 先出默认骨架。
-3. **贴代码**：进入该 Worker → Edit code → 全选删除 → 把 `src/worker.js` 全文粘进去 → Save and deploy。
-4. **加 Secrets**：Worker → Settings → Variables and Secrets → Add：
-   - `TURSO_URL`（Secret）= 数据库地址，如 `https://torrent-index-<org>.aws-ap-northeast-1.turso.io`
-     （`libsql://` 前缀也会被代码自动转换，二者皆可）
-   - `TURSO_TOKEN`（Secret）= 第 1 步的只读令牌
-   - 可选 `LOG_SALT`（Secret）= 搜索日志 IP 哈希盐，任意长随机串；不设时用代码内默认值。
-5. 打开 `https://torrent-search.<你的子域>.workers.dev` 验证首页计数、搜一个已入库的词、
-   打开种子详情点「复制磁力」。首页若显示「服务器尚未配置」= Secret 没加对。
-6. **自定义域名**（站名/域名定下来之后）：Worker → Settings → Domains & Routes → Add Custom Domain。
-   在此之前一律用 workers.dev 地址内测。
+本仓库 `ReardonYang/torrdex` 已连接 Cloudflare Workers Builds（Worker 名 `torrdex`，以
+`wrangler.toml` 的 `name` 为准）：**推送到 `main` 分支即自动构建部署**——构建命令为空、
+部署命令 `npx wrangler deploy`，无需本地 wrangler 授权，也不用再手动粘贴代码。
 
-> 若之后有了 wrangler 授权：本目录 `wrangler.toml` 已备好，`wrangler deploy` + `wrangler secret put` 等价。
+一次性前置（已完成；迁移或重建时才需要再做）：
+
+1. **Turso 令牌**：Turso 控制台 → 数据库 `torrent-index` → Create Token（现行用读写令牌，
+   与爬虫共用同一枚：搜索日志与投诉落库需要写权限；只读令牌下这两处会静默失败，
+   取舍见「行为约定」）。令牌只显示一次，不要经聊天/文档中转。
+2. **Worker 与变量**：Dashboard 建 Worker `torrdex` 后，在 Settings → Variables and Secrets 添加：
+   - `TURSO_URL`（变量）= `libsql://torrent-index-reardon.aws-ap-northeast-1.turso.io`
+     （同时写在 `wrangler.toml` 的 `[vars]` 里，二者一致）
+   - `TURSO_TOKEN`（Secret）= 第 1 步的令牌，加密保存，只写不可读
+   - 可选 `LOG_SALT`（Secret）= 搜索日志 IP 哈希盐；不设时用代码内默认值
+   `wrangler.toml` 已设 `keep_vars = true`，Git 部署不会冲掉 Dashboard 管理的变量与机密。
+3. **自定义域名**：`torrdex.com` 在 Worker `torrdex` 的 Domains 页绑定（生产环境）。
+
+验证：打开 https://torrdex.com/api/stats 返回真实计数即通；首页显示「服务器尚未配置」
+= 机密没配对。
 
 ## 本地自检
 
