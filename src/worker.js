@@ -862,16 +862,20 @@ html[data-theme="flat"] .err{border-radius:3px}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
-.acct-btns{display:flex;gap:8px;align-items:center;flex:none}
+.acct-btns{display:flex;gap:0;align-items:stretch;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);box-shadow:var(--chip-shadow)}
+.acct-btns.solo{border:0;background:transparent;box-shadow:none}
+.hero-sep{width:1px;background:var(--surface-border);margin:5px 2px;flex:none}
+.avatar-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex:none;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
+.avatar-btn:hover{text-decoration:none;filter:brightness(1.05)}
 /* 统一区块行: 搜索框与登录/注册同排, 等高 (2026-10-27 用户定) */
 .hero-row{display:flex;gap:10px;justify-content:center;align-items:stretch;max-width:860px;margin:22px auto 4px}
 .hero-row .search-hero{flex:1 1 auto;max-width:640px;margin:0}
 .hero-row .acct-btns{align-items:stretch}
 .hero-row .acct-btn{display:flex;align-items:center}
 @media (max-width:734px){.hero-row{gap:8px}.hero-row .acct-btn{padding:6px 9px}}
-.acct-btn{font-size:12.5px;font-weight:600;padding:6px 13px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
+.acct-btn{display:flex;align-items:center;font-size:12.5px;font-weight:600;padding:6px 13px;white-space:nowrap;color:var(--chip-ink)}
 .acct-btn:hover{text-decoration:none;filter:brightness(1.04)}
-.acct-btn.primary{border-color:var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow)}
+.acct-btn.primary{border-left:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow)}
 .acct-btn.primary:hover{background:var(--btn-hover)}
 @media (max-width:734px){.acct-btn{padding:6px 9px;font-size:12px}}
 .auth-card{max-width:420px;margin:30px auto}
@@ -959,7 +963,7 @@ if(at){ at.addEventListener('click',function(){
 // 账号入口: td_user 仅供显示, 登录态以 HttpOnly 的 td_session 为准
 var acct=document.getElementById('acct-btns');
 var mu=document.cookie.match(/(?:^|;\\s*)td_user=([^;]*)/);
-if(acct&&mu){ acct.innerHTML=''; var aa=document.createElement('a'); aa.className='acct-btn'; aa.href='/account'; aa.textContent=decodeURIComponent(mu[1]); acct.appendChild(aa); }
+if(acct&&mu){ acct.innerHTML=''; acct.classList.add('solo'); var aa=document.createElement('a'); aa.className='avatar-btn'; aa.href='/account'; aa.title=decodeURIComponent(mu[1]); aa.setAttribute('aria-label','我的账号'); aa.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21.5v-1c0-3.9 3.6-6 8-6s8 2.1 8 6v1H4z"/></svg>'; acct.appendChild(aa); }
 // 收藏: 状态由 /api/favorites/ids 回填; 未登录点击跳登录页
 var favBtns=document.querySelectorAll('[data-fav]');
 if(favBtns.length){
@@ -985,7 +989,7 @@ function heroHtml(stats, q) {
   return `<div class="hero"><h1>TorrDex</h1>
 <p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
 </div>
-<div class="hero-row">${searchHeroHtml(q || "", true)}<span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span></div>${stats ? `
+<div class="hero-row">${searchHeroHtml(q || "", true)}<span class="hero-sep" aria-hidden="true"></span><span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span></div>${stats ? `
 <div class="stats-line">已索引 <b>${esc(fmtNum(stats.torrents))}</b> 条种子 · <b>${esc(fmtNum(stats.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(stats.alive))} 条 · 更新于 ${esc(updated)}</div>` : ""}`;
 }
 
