@@ -852,8 +852,12 @@ html[data-theme="flat"] .err{border-radius:3px}
 .favbtn.on{color:#a87b00;border-color:#a87b00;font-weight:700}
 html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 /* 账号 */
-.acct-link{font-size:12.5px;font-weight:600;color:var(--slot-ink);background:var(--slot-bg);border:1px solid var(--slot-border);box-shadow:var(--slot-shadow);padding:6px 13px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
-.acct-link:hover{text-decoration:none;filter:brightness(1.3)}
+.acct-btns{display:flex;gap:8px;align-items:center;flex:none}
+.acct-btn{font-size:12.5px;font-weight:600;padding:6px 13px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-ink);box-shadow:var(--chip-shadow)}
+.acct-btn:hover{text-decoration:none;filter:brightness(1.04)}
+.acct-btn.primary{border-color:var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow)}
+.acct-btn.primary:hover{background:var(--btn-hover)}
+@media (max-width:734px){.acct-btn{padding:6px 9px;font-size:12px}}
 .auth-card{max-width:420px;margin:30px auto}
 .auth-card .f-inp{margin:0 0 12px}
 .auth-card label{display:block;font-size:13px;color:var(--mut);margin:0 0 5px}
@@ -861,13 +865,19 @@ html[data-theme="flat"] .favbtn.on{color:#e8c34a;border-color:#e8c34a}
 .auth-btn:hover{background:var(--abtn-hover)}
 /* 全站矩形 (2026-10-27 用户定: 控件与视觉一律不用圆角) */
 *,*::before,*::after{border-radius:0!important}
-/* 分页固定头: 标题 + 居中搜索滚动时固定在顶栏之下 (2026-10-27) */
-.stickybar{position:sticky;top:52px;z-index:15;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 0 10px;background-color:var(--bg);background-image:var(--bgimg);border-bottom:1px solid var(--row-sep)}
-.stickybar .ptitle{margin:0;font-size:22px;flex:none}
-.wrap .stickybar .search-hero{position:static;flex:1 1 260px;margin:0}
-/* 无标题页 (详情/作品/结果) 的搜索条自身固定 */
-.search-hero:not(.big){position:sticky;top:62px;z-index:14}
-@media (max-width:734px){.stickybar .ptitle{font-size:18px}}
+/* 分页头: 与首页同一布局语言 — 标题居中, 搜索在其下, 静态不重叠 (2026-10-27 晚定, 撤固定头) */
+.page-head{text-align:center;padding:30px 0 2px}
+.page-head .ptitle{margin:0}
+.page-head .search-hero{margin-top:18px}
+/* 分类页 热门/最新 段控 (与顶栏外观段控同一套变量, 风格统一) */
+.tabs-wrap{text-align:center;margin:18px 0 2px}
+.tabs{display:inline-flex;background:var(--seg-track);border:1px solid var(--seg-border);box-shadow:var(--seg-shadow);padding:2px;gap:2px}
+.tabs a{padding:6px 20px;font-size:13px;line-height:1.25;color:var(--seg-ink)}
+.tabs a:hover{text-decoration:none}
+.tabs a.on{background:var(--seg-on-bg);color:var(--seg-on-ink);box-shadow:var(--seg-on-shadow);font-weight:600}
+/* 登录/注册: 卡片在主区正中 */
+.center-main{display:flex;align-items:center;justify-content:center}
+.center-main .auth-card{margin:0;width:100%}
 /* 细节 (Rams: 少但是更好; Jobs: 设计是它如何运作) */
 ::selection{background:rgba(0,102,204,.16)}
 :focus-visible{outline:2px solid var(--link);outline-offset:1px}
@@ -932,9 +942,9 @@ if(at){ at.addEventListener('click',function(){
   }
 });}
 // 账号入口: td_user 仅供显示, 登录态以 HttpOnly 的 td_session 为准
-var acct=document.getElementById('acct-link');
+var acct=document.getElementById('acct-btns');
 var mu=document.cookie.match(/(?:^|;\\s*)td_user=([^;]*)/);
-if(acct&&mu){ acct.textContent=decodeURIComponent(mu[1]); acct.href='/account'; }
+if(acct&&mu){ acct.innerHTML=''; var aa=document.createElement('a'); aa.className='acct-btn'; aa.href='/account'; aa.textContent=decodeURIComponent(mu[1]); acct.appendChild(aa); }
 // 收藏: 状态由 /api/favorites/ids 回填; 未登录点击跳登录页
 var favBtns=document.querySelectorAll('[data-fav]');
 if(favBtns.length){
@@ -960,7 +970,7 @@ function searchHeroHtml(q, big) {
     `<button type="submit">搜索</button></form>`;
 }
 
-function layout({ title, body, adultOn, q, home, ptitle, nosearch }) {
+function layout({ title, body, adultOn, q, home, ptitle, nosearch, center }) {
   return `<!DOCTYPE html>
 <html lang="zh-CN" data-theme="jobs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -969,10 +979,10 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch }) {
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
 <nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
-<a class="acct-link" id="acct-link" href="/login">登录</a>
+<span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 <div class="seg" role="group" aria-label="外观"><button type="button" data-th="jobs">浅色</button><button type="button" data-th="flat">深色</button></div>
 </div></header>
-<main class="wrap">${home || nosearch ? "" : ptitle ? `<div class="stickybar"><h1 class="ptitle">${esc(ptitle)}</h1>${searchHeroHtml(q || "")}</div>` : searchHeroHtml(q || "")}${body}</main>
+<main class="wrap${center ? " center-main" : ""}">${home || nosearch ? "" : ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1>${searchHeroHtml(q || "")}</div>` : searchHeroHtml(q || "")}${body}</main>
 <footer><div class="wrap">
 <a href="/about">数据口径</a><a href="/takedown">权利投诉</a>
 <button id="adult-toggle" class="chipbtn" type="button">成人分类：${adultOn ? "开" : "关"}</button>
@@ -1350,7 +1360,7 @@ ${isLogin ? "" : `<label>再输一次密码</label><input class="f-inp" type="pa
   ? `还没有账号？<a href="/register?next=${encodeURIComponent(next || "/")}">注册</a>`
   : `已有账号？<a href="/login?next=${encodeURIComponent(next || "/")}">直接登录</a>`}</p>
 </div>`;
-  return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn, nosearch: true });
+  return layout({ title: `${isLogin ? "登录" : "注册"} — TorrDex`, body, adultOn, nosearch: true, center: true });
 }
 
 function pageAccount(user, adultOn) {
@@ -1503,7 +1513,7 @@ export default {
         const tab = url.searchParams.get("tab") === "latest" ? "latest" : "top";
         const data = await doList(env, tab, c.code, allowed);
         const body = `<section>
-<p class="mut"><a href="/browse/${c.code}?tab=${tab === "latest" ? "top" : "latest"}">切换到${tab === "latest" ? "热门" : "最新"}</a></p>
+<div class="tabs-wrap"><span class="tabs"><a href="/browse/${c.code}?tab=top"${tab === "top" ? ` class="on"` : ""}>热门</a><a href="/browse/${c.code}?tab=latest"${tab === "latest" ? ` class="on"` : ""}>最新收录</a></span></div>
 ${data.torrents.length ? `<div class="list">${data.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}</section>`;
         return htmlResp(layout({ title: `${c.name_zh} — 浏览`, body, adultOn: allowed, ptitle: `${c.name_zh} · ${tab === "latest" ? "最新收录" : "热门"}` }));
       }
