@@ -1,7 +1,7 @@
 // 自检: 用 mock fetch 模拟 Turso /v2/pipeline 响应, 验证
 //  1) >=3 字符查询走 FTS MATCH + bm25; 2) 2 字 CJK 走 LIKE 兜底;
 //  3) rerank 排序合理 (死种沉底); 4) 磁力含 xt+dn+tr 且去重;
-//  5) 成人行在无 cookie 时被 SQL 层过滤, 有 cookie+adult=1 时放行。
+//  5) 成人内容默认直接显示 (2026-10-28 站长定: 无开关, SQL 层不过滤)。
 // 运行: node test/selftest.mjs
 import worker, { __test } from "../src/worker.js";
 
@@ -97,29 +97,17 @@ seenSql.length = 0;
   ok(data.mode === "like", "mode reported as like");
 }
 
-// ---- 3) 成人过滤 ----
+// ---- 3) 成人内容默认显示 (2026-10-28: 去掉开关, 默认直接显示) ----
 seenSql.length = 0;
 {
   await worker.fetch(new Request("https://x/api/search?q=dune"), env, ctx);
-  ok(seenSql.some((s) => s.includes("policy='adult'")), "without cookie: SQL excludes adult policy");
+  ok(!seenSql.some((s) => s.includes("policy='adult'")), "no cookie: adult NOT excluded (always on)");
 }
 seenSql.length = 0;
 {
-  const req = new Request("https://x/api/search?q=dune&adult=1", { headers: { Cookie: "adult=1" } });
+  const req = new Request("https://x/api/search?q=dune", { headers: { Cookie: "adult=0" } });
   await worker.fetch(req, env, ctx);
-  ok(!seenSql.some((s) => s.includes("policy='adult'")), "with cookie+adult=1: no adult exclusion");
-}
-seenSql.length = 0;
-{
-  const req = new Request("https://x/api/search?q=dune&adult=1"); // 参数有、cookie 无
-  await worker.fetch(req, env, ctx);
-  ok(seenSql.some((s) => s.includes("policy='adult'")), "param without cookie: still excluded");
-}
-seenSql.length = 0;
-{
-  const req = new Request("https://x/api/search?q=dune", { headers: { Cookie: "adult=1" } }); // 只有 cookie (2026-10-27 单条件)
-  await worker.fetch(req, env, ctx);
-  ok(!seenSql.some((s) => s.includes("policy='adult'")), "cookie only (no param): adult allowed after fix");
+  ok(!seenSql.some((s) => s.includes("policy='adult'")), "any cookie state: adult NOT excluded (always on)");
 }
 
 // ---- 4) rerank: 健康高做种在前, 死种沉底 ----
@@ -148,10 +136,10 @@ seenSql.length = 0;
 // ---- 6) 规范化与 adultAllowed ----
 {
   ok(__test.normalizedKey("Ｄｕｎｅ．2024") === "dune2024", "normalizedKey: NFKC + strip punct");
-  ok(__test.adultAllowed(new Request("https://x/", { headers: { Cookie: "adult=1" } }), new URL("https://x/")) === true,
-     "adultAllowed: cookie alone allows (2026-10-27)");
-  ok(__test.adultAllowed(new Request("https://x/?adult=1"), new URL("https://x/?adult=1")) === false,
-     "adultAllowed: param alone does not allow");
+  ok(__test.adultAllowed(new Request("https://x/"), new URL("https://x/")) === true,
+     "adultAllowed: always true, no cookie needed (2026-10-28)");
+  ok(__test.adultAllowed(new Request("https://x/?adult=1"), new URL("https://x/?adult=1")) === true,
+     "adultAllowed: always true regardless of params (2026-10-28)");
 }
 
 // ---- 7) 密码哈希 (PBKDF2) ----

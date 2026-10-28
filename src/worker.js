@@ -162,14 +162,13 @@ async function getCategories(env) {
 function catByCode(cats, code) { return cats.find((c) => c.code === code) || null; }
 function catById(cats, id) { return cats.find((c) => c.id === id) || null; }
 
-// ---------------- 成人策略 (PRD §5: 默认关, 主动开启才参与) ----------------
+// ---------------- 成人策略 (2026-10-28 站长定: 无开关, 默认直接显示) ----------------
 
-// 只认 cookie adult=1: 该 cookie 只能由页脚开关经年龄确认后写入, 写入本身即「主动开启」
-// 的凭据。旧版「cookie + URL 参数双条件」会让开关在普通站内跳转后静默失效 (参数丢失),
-// 用户反馈按钮失效, 2026-10-27 改为单条件。无 cookie -> SQL 层排除成人分类与作品。
+// 历史: 曾有页脚开关 (cookie adult=1 才显示), 站长反馈开关不好用, 2026-10-28 明确
+// 「去掉按钮 = 默认直接显示成人内容」, 故此处恒为 true: SQL 层不再排除成人分类与
+// 作品, /browse/adult 直接可达。adultSql() 在 allowed=true 时返回空串, 保留作口子。
 export function adultAllowed(request, url) {
-  const cookie = request.headers.get("Cookie") || "";
-  return /(?:^|;\s*)adult=1(?:;|$)/.test(cookie);
+  return true;
 }
 
 function adultSql(alias, allowed) {

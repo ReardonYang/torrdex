@@ -34,7 +34,7 @@ HTML/CSS/JS 全部内嵌。数据在 Turso（libSQL），Worker 只通过 HTTP `
 
 ```
 node --check src/worker.js        # 语法
-node test/selftest.mjs            # mock Turso: FTS/LIKE 路径、重排、磁力、成人过滤（21 项）
+node test/selftest.mjs            # mock Turso: FTS/LIKE 路径、重排、磁力、成人默认显示
 node test/sqlcheck.mjs            # 把 Worker 实际生成的 SQL 在真实 DDL 库上执行验真
 ```
 
@@ -55,8 +55,9 @@ node test/sqlcheck.mjs            # 把 Worker 实际生成的 SQL 在真实 DDL
   渲染为可点筛选链接。注意：结果列表本身受筛选 + Top-200 召回限制，极端大结果集下
   「总数（facet 口径）」与「可翻页条数（≤200×页）」会不一致——这是 §10.3 架构的已知取舍，
   与爬虫本地搜索一致。
-- **成人策略**（§5）：默认 SQL 层排除 `policy='adult'` 的分类与作品。开启只认 cookie：
-  页脚开关经年龄确认后写 cookie `adult=1`（30 天），此后全站生效直至关闭。
+- **成人策略**（2026-10-28 站长定）：无开关，成人内容默认直接显示。`adultAllowed()`
+  恒为 true，SQL 层不排除 `policy='adult'` 的分类与作品，`/browse/adult` 直接可达。
+  （历史：曾有页脚 cookie 开关，站长反馈不好用后按其指示改为默认显示。）
   2026-10-27 由「cookie + URL 参数双条件」改为单条件——双条件会让开关在普通站内
   跳转后静默失效（参数丢失），用户实测反馈「按钮失效」。只带参数、无 cookie 时仍排除。
 - **搜索日志**（FR-SRCH-04）：`ctx.waitUntil` 异步写 `search_logs`，只记规范化词与结果数；
@@ -78,7 +79,7 @@ node test/sqlcheck.mjs            # 把 Worker 实际生成的 SQL 在真实 DDL
   FR-TORR-04 详情页内嵌同作品其他版本（现以作品页链接代替）；FR-TORR-03 二维码；
   FR-BRWS-02 Top100 的时间窗口切换（现用 `popularity_7d` 单口径）；sitemap/SEO 收录策略（§9）未落地。
 - **P2 未做**：元数据自动补全与海报墙、发布组/人物/厂商页（`/group`、`/person`、`/studio`）、
-  订阅与到货提醒、成人分类正式开关决策（§14 待决；代码已按默认关实现）。
+  订阅与到货提醒。成人分类已按站长 2026-10-28 决策改为默认直接显示（无开关）。
 - **P3 未做**：评论、三键反馈（`/api/feedback`）、用户提交（`/api/submit`）、
   认证与签名、举报/审核后台界面（队列与黑名单表在模型层，入库侧由爬虫执行 FR-ADM-01）。
   账号体系已于 2026-10-27 上线基础版（见上「账号」条），不在未做之列。
