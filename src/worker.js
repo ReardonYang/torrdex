@@ -821,6 +821,7 @@ html[data-theme="flat"] .pager a,html[data-theme="flat"] .pager span{border-radi
 footer{border-top:1px solid var(--foot-border);color:var(--mut);font-size:12px;line-height:1.6;padding:18px 0 30px;margin-top:44px}
 footer a{color:var(--ink);opacity:.75;margin-right:14px}
 .chipbtn{border:1px solid var(--chip-border);background:var(--chip-bg);box-shadow:var(--chip-shadow);border-radius:980px;padding:3px 12px;font-size:12px;color:var(--chip-ink);cursor:pointer}
+#adult-toggle[data-arm="1"]{background:#b3261e;border-color:#b3261e;color:#fff;font-weight:700}
 html[data-theme="flat"] .chipbtn{border-radius:2px}
 .ac{position:absolute;left:0;top:calc(100% + 8px);width:100%;background:var(--ac-bg);border:1px solid var(--surface-border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.22);z-index:50;padding:6px;overflow:hidden}
 html[data-theme="flat"] .ac{border-radius:3px;box-shadow:none}
@@ -837,7 +838,7 @@ html[data-theme="flat"] .err{border-radius:3px}
 .toggle{font-size:12px;color:var(--mut)}
 @media (max-width:734px){
  .top nav{display:none}
- .burger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;background:transparent;color:var(--nav-ink);cursor:pointer;padding:0;flex:none}
+ .burger{display:flex;align-items:center;justify-content:center;margin-left:auto;width:32px;height:32px;border:0;background:transparent;color:var(--nav-ink);cursor:pointer;padding:0;flex:none}
  .top nav.open{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;background:var(--bar-bg);border-bottom:1px solid var(--bar-border);padding:8px 14px 12px;gap:2px;z-index:80;box-shadow:0 14px 28px rgba(0,0,0,.35)}
  .top nav.open a{padding:10px 6px;font-size:14px}
  .top-in{gap:10px}
@@ -950,8 +951,8 @@ if(burger){ var topnav=burger.parentElement.querySelector('nav'); burger.addEven
 var at=document.getElementById('adult-toggle');
 if(at){ at.addEventListener('click',function(){
   var on=/(?:^|;\\s*)adult=1(?:;|$)/.test(document.cookie);
-  if(on){ document.cookie='adult=; path=/; max-age=0'; location.reload(); return; }
-  if(at.getAttribute('data-arm')==='1'){ document.cookie='adult=1; path=/; max-age=2592000'; location.reload(); return; }
+  if(on){ document.cookie='adult=; path=/; max-age=0'; if(location.pathname==='/browse/adult'){ location.href='/'; } else { location.reload(); } return; }
+  if(at.getAttribute('data-arm')==='1'){ document.cookie='adult=1; path=/; max-age=2592000'; location.href='/browse/adult'; return; }
   at.setAttribute('data-arm','1'); at.textContent='已满 18 岁？再点一次开启';
   setTimeout(function(){ if(at.getAttribute('data-arm')==='1'){ at.removeAttribute('data-arm'); at.textContent='成人分类：关'; } },5000);
 });}
@@ -1007,7 +1008,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <body>
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
-<nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
+<nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a>${adultOn ? `<a href="/browse/adult">成人分类</a>` : ""}</nav>
 <button type="button" class="burger" id="burger" aria-label="菜单" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
 <button type="button" class="lamp" id="lamp" aria-label="切换浅色 / 深色" title="切换浅色 / 深色"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 18h5"/><path d="M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.2 1.1 2.2h5c0-1 .4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg></button>
 <span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
