@@ -735,6 +735,8 @@ header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);bo
 .lamp{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:0;background:transparent;color:var(--nav-ink);opacity:.75;cursor:pointer;padding:0}
 .lamp:hover{opacity:1}
 html[data-theme="flat"] .lamp{color:#f6c453;opacity:1;filter:drop-shadow(0 0 5px rgba(246,196,83,.55))}
+.top{position:relative}
+.burger{display:none}
 .hero{padding:72px 0 4px;text-align:center}
 .hero h1{font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-.018em;margin:0}
 html[data-theme="flat"] .hero h1{font-weight:200;letter-spacing:.14em;text-shadow:none}
@@ -787,9 +789,10 @@ html[data-theme="flat"] .mag{border-radius:2px}
 .filters form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .filters select{height:36px;padding:0 10px;border:1px solid var(--field-border);border-radius:8px;font-size:14px;background:var(--sel-bg);color:var(--ink);box-shadow:var(--chip-shadow)}
 html[data-theme="flat"] .filters select{border-radius:2px}
-.filters button{height:36px;padding:0 18px;border:1px solid var(--btn-border);background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);box-shadow:var(--btn-shadow);border-radius:980px;font-size:14px;cursor:pointer}
-.filters button:hover{background:var(--btn-hover)}
-html[data-theme="flat"] .filters button{border-radius:2px}
+.filters button{height:36px;padding:0 18px;border:1px solid var(--abtn-border);background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);box-shadow:var(--abtn-shadow);font-size:14px;cursor:pointer;font-family:inherit}
+.filters button:hover{background:var(--abtn-hover)}
+html[data-theme="flat"] .filters button{background:#232327;border-color:rgba(255,255,255,.22);color:#ececf0;text-shadow:none;box-shadow:none}
+html[data-theme="flat"] .filters button:hover{background:#2b2b31}
 .filters .mut{margin-top:10px}
 .result-head{color:var(--mut);font-size:14px;margin:14px 2px 10px}
 .result-head b{color:var(--ink)}
@@ -802,11 +805,12 @@ tr.rec td{background:rgba(10,86,196,.05)}
 html[data-theme="flat"] tr.rec td{background:rgba(255,255,255,.05)}
 .kv{display:grid;grid-template-columns:104px 1fr;gap:7px 16px;font-size:14px}
 .kv dt{color:var(--mut)}.kv dd{margin:0;word-break:break-all}
-textarea.magnet{width:100%;min-height:64px;font-family:ui-monospace,SF Mono,Menlo,Consolas,monospace;font-size:12px;border:1px solid var(--field-border);border-radius:8px;padding:10px 12px;background:var(--field-bg);color:var(--ink);box-shadow:var(--field-shadow)}
+textarea.magnet{width:100%;min-height:64px;resize:none;overflow:hidden;font-family:ui-monospace,SF Mono,Menlo,Consolas,monospace;font-size:12px;border:1px solid var(--field-border);border-radius:8px;padding:10px 12px;background:var(--field-bg);color:var(--ink);box-shadow:var(--field-shadow)}
 html[data-theme="flat"] textarea.magnet{border-radius:2px}
-.bigmag{display:inline-block;background:var(--btn-bg);color:var(--btn-ink);text-shadow:var(--btn-tshadow);padding:12px 28px;border-radius:980px;font-size:15px;border:1px solid var(--btn-border);box-shadow:var(--btn-shadow);cursor:pointer}
-.bigmag:hover{background:var(--btn-hover);text-decoration:none}
-html[data-theme="flat"] .bigmag{border-radius:2px}
+.bigmag{display:inline-flex;align-items:center;height:38px;background:var(--abtn-bg);color:var(--abtn-ink);text-shadow:var(--abtn-tshadow);padding:0 24px;font-size:15px;border:1px solid var(--abtn-border);box-shadow:var(--abtn-shadow);cursor:pointer;font-family:inherit}
+.bigmag:hover{background:var(--abtn-hover);text-decoration:none}
+html[data-theme="flat"] .bigmag{border-radius:2px;background:#232327;border-color:rgba(255,255,255,.22);color:#ececf0;text-shadow:none;box-shadow:none}
+html[data-theme="flat"] .bigmag:hover{background:#2b2b31}
 .f-inp{width:100%;height:40px;border:1px solid var(--field-border);border-radius:8px;padding:0 12px;font-size:14px;background:var(--field-bg);color:var(--ink);box-shadow:var(--field-shadow)}
 html[data-theme="flat"] .f-inp{border-radius:2px}
 .pager{display:flex;gap:8px;justify-content:center;margin:22px 0;align-items:center}
@@ -833,6 +837,9 @@ html[data-theme="flat"] .err{border-radius:3px}
 .toggle{font-size:12px;color:var(--mut)}
 @media (max-width:734px){
  .top nav{display:none}
+ .burger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;background:transparent;color:var(--nav-ink);cursor:pointer;padding:0;flex:none}
+ .top nav.open{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;background:var(--bar-bg);border-bottom:1px solid var(--bar-border);padding:8px 14px 12px;gap:2px;z-index:80;box-shadow:0 14px 28px rgba(0,0,0,.35)}
+ .top nav.open a{padding:10px 6px;font-size:14px}
  .top-in{gap:10px}
  .logo{font-size:15px}
  .seg button{padding:5px 8px;font-size:11.5px}
@@ -936,16 +943,22 @@ var lamp=document.getElementById('lamp');
 if(lamp){ lamp.addEventListener('click',function(){
   var t=document.documentElement.getAttribute('data-theme')==='flat'?'jobs':'flat';
   document.documentElement.setAttribute('data-theme',t);
-  document.cookie='td_theme='+t+'; path=/; max-age=31536000';
+  document.cookie='theme='+t+'; path=/; max-age=31536000';
 }); }
+var burger=document.getElementById('burger');
+if(burger){ var topnav=burger.parentElement.querySelector('nav'); burger.addEventListener('click',function(){ var open=topnav.classList.toggle('open'); burger.setAttribute('aria-expanded',open?'true':'false'); }); }
 var at=document.getElementById('adult-toggle');
 if(at){ at.addEventListener('click',function(){
   var on=/(?:^|;\\s*)adult=1(?:;|$)/.test(document.cookie);
-  if(on){ document.cookie='adult=; path=/; max-age=0'; location.reload(); }
-  else if(confirm('成人分类包含成人内容。确认你已年满 18 周岁并主动开启?')){
-    document.cookie='adult=1; path=/; max-age=2592000'; location.reload();
-  }
+  if(on){ document.cookie='adult=; path=/; max-age=0'; location.reload(); return; }
+  if(at.getAttribute('data-arm')==='1'){ document.cookie='adult=1; path=/; max-age=2592000'; location.reload(); return; }
+  at.setAttribute('data-arm','1'); at.textContent='已满 18 岁？再点一次开启';
+  setTimeout(function(){ if(at.getAttribute('data-arm')==='1'){ at.removeAttribute('data-arm'); at.textContent='成人分类：关'; } },5000);
 });}
+document.querySelectorAll('textarea.magnet').forEach(function(ta){
+  function fit(){ ta.style.height='auto'; ta.style.height=(ta.scrollHeight+2)+'px'; }
+  fit(); window.addEventListener('resize',fit);
+});
 // 账号入口: td_user 仅供显示, 登录态以 HttpOnly 的 td_session 为准
 var acct=document.getElementById('acct-btns');
 var mu=document.cookie.match(/(?:^|;\\s*)td_user=([^;]*)/);
@@ -973,7 +986,7 @@ if(favBtns.length){
 function heroHtml(stats, q) {
   const updated = stats && stats.updated_at ? fmtTime(stats.updated_at).slice(11, 16) : "--:--";
   return `<div class="hero"><h1>TorrDex</h1>
-<p>搜得到 · 判得准 · 拿得走 —— 全部数字为实测真数</p>
+<p>搜得到 · 判得准 · 拿得走 —— 全网好资源，一搜就有</p>
 </div>
 ${searchHeroHtml(q || "", true)}${stats ? `
 <div class="stats-line">已索引 <b>${esc(fmtNum(stats.torrents))}</b> 条种子 · <b>${esc(fmtNum(stats.titles))}</b> 部作品 · 其中存活 ${esc(fmtNum(stats.alive))} 条 · 更新于 ${esc(updated)}</div>` : ""}`;
@@ -995,6 +1008,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <header class="top"><div class="wrap top-in">
 <a class="logo" href="/">TorrDex</a>
 <nav><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
+<button type="button" class="burger" id="burger" aria-label="菜单" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
 <button type="button" class="lamp" id="lamp" aria-label="切换浅色 / 深色" title="切换浅色 / 深色"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 18h5"/><path d="M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.2 1.1 2.2h5c0-1 .4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg></button>
 <span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 </div></header>
@@ -1191,7 +1205,7 @@ function pageTorrent(data, cats, adultOn, stats) {
 <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.01em;word-break:break-all">${esc(t.name)}</h1>
 ${t.name_raw && t.name_raw !== t.name ? `<div class="mut">原始名：${esc(t.name_raw)}</div>` : ""}
 ${data.title ? `<div style="margin-top:4px">所属作品：<a href="/title/${data.title.id}">${esc(data.title.canonical_title)}${data.title.year ? ` (${esc(data.title.year)})` : ""}</a></div>` : ""}
-<div style="margin:14px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="bigmag" data-copy="${esc(t.magnet)}">复制磁力链接</button><button class="favbtn" data-fav="${esc(t.infohash)}" type="button" style="padding:11px 18px;font-size:14px">☆ 收藏</button></div>
+<div style="margin:14px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="bigmag" data-copy="${esc(t.magnet)}">复制磁力链接</button><button class="favbtn" data-fav="${esc(t.infohash)}" type="button" style="height:38px;padding:0 16px;font-size:14px;display:inline-flex;align-items:center">☆ 收藏</button></div>
 <textarea class="magnet" readonly onclick="this.select()">${esc(t.magnet)}</textarea>
 <dl class="kv" style="margin-top:12px">
 <dt>infohash</dt><dd><code>${esc(t.infohash)}</code></dd>
