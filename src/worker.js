@@ -637,7 +637,7 @@ function latestPager(d, catCode) {
   for (let n = start; n <= end; n++) {
     items += n === d.page ? `<span class="cur">${n}</span>` : `<a href="${base}page=${n}">${n}</a>`;
   }
-  return `<div class="pager">${d.page > 1 ? `<a href="${base}page=${d.page - 1}">上一页</a>` : ""}${items}${d.page < d.totalPages ? `<a href="${base}page=${d.page + 1}">下一页</a>` : ""}</div>`;
+  return `<div class="pager">${d.page > 1 ? `<a href="${base}page=1">首页</a><a href="${base}page=${d.page - 1}">上一页</a>` : ""}${items}${d.page < d.totalPages ? `<a href="${base}page=${d.page + 1}">下一页</a>` : ""}</div>`;
 }
 
 let _statsCache = { off: null, on: null };
