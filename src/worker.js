@@ -628,14 +628,14 @@ async function doLatestPage(env, page, catCode, allowed) {
 function latestPager(d, catCode) {
   if (d.totalPages <= 1) return "";
   const base = "/latest?" + (catCode ? `cat=${encodeURIComponent(catCode)}&` : "");
-  const nums = [...new Set([1, d.totalPages, d.page - 1, d.page, d.page + 1])]
-    .filter((n) => n >= 1 && n <= d.totalPages).sort((a, b) => a - b);
+  // 快捷导航窗口: 最多 10 个连续页码, 当前页居中滑动 (2026-11-01 用户定)
+  const WIN = 10;
+  let start = Math.max(1, Math.min(d.page - Math.floor(WIN / 2), d.totalPages - WIN + 1));
+  const end = Math.min(d.totalPages, start + WIN - 1);
+  start = Math.max(1, end - WIN + 1);
   let items = "";
-  let prev = 0;
-  for (const n of nums) {
-    if (prev && n - prev > 1) items += `<span>…</span>`;
+  for (let n = start; n <= end; n++) {
     items += n === d.page ? `<span class="cur">${n}</span>` : `<a href="${base}page=${n}">${n}</a>`;
-    prev = n;
   }
   return `<div class="pager">${d.page > 1 ? `<a href="${base}page=${d.page - 1}">上一页</a>` : ""}${items}${d.page < d.totalPages ? `<a href="${base}page=${d.page + 1}">下一页</a>` : ""}</div>`;
 }
