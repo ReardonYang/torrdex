@@ -110,6 +110,17 @@ seenSql.length = 0;
   ok(!seenSql.some((s) => s.includes("policy='adult'")), "any cookie state: adult NOT excluded (always on)");
 }
 
+// ---- 3b) /latest 分页: 时间倒序 + LIMIT/OFFSET, 不得引用不存在的 t.id ----
+seenSql.length = 0;
+{
+  const res = await worker.fetch(new Request("https://x/latest?page=2"), env, ctx);
+  ok(res.status === 200, "/latest page route returns 200, got " + res.status);
+  const sql = seenSql.find((x) => x.includes("LIMIT ? OFFSET ?")) || "";
+  ok(sql.includes("ORDER BY t.first_seen_at DESC, t.infohash DESC"), "/latest orders by first_seen_at DESC, infohash DESC");
+  ok(!sql.includes("t.id"), "/latest SQL never references t.id (torrents PK is infohash)");
+  ok(seenSql.some((x) => x.includes("COUNT(*) AS n FROM torrents")), "/latest issues a total COUNT");
+}
+
 // ---- 4) rerank: 健康高做种在前, 死种沉底 ----
 {
   const rows = [

@@ -619,7 +619,7 @@ async function doLatestPage(env, page, catCode, allowed) {
   const args = [];
   const sql = `SELECT ${TOR_COLS} ${TOR_JOIN} WHERE t.status = 'active'` +
     adultSql("t", allowed) + filterSql({ catId, resolution: null, health: null }, args) +
-    ` ORDER BY t.first_seen_at DESC, t.id DESC LIMIT ? OFFSET ?`;
+    ` ORDER BY t.first_seen_at DESC, t.infohash DESC LIMIT ? OFFSET ?`;
   args.push(LATEST_PAGE_SIZE, (p - 1) * LATEST_PAGE_SIZE);
   const rows = await q1(env, sql, args);
   return { kind: "latest", category: catCode || null, torrents: rows.map((r) => torrentJson(r, cats)), total, page: p, totalPages };
