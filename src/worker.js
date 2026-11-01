@@ -605,6 +605,41 @@ async function doList(env, kind, catCode, allowed) {
   return { kind, category: catCode || null, torrents: rows.map((r) => torrentJson(r, cats)) };
 }
 
+const LATEST_PAGE_SIZE = 20;
+async function doLatestPage(env, page, catCode, allowed) {
+  const cats = await getCategories(env);
+  const catId = catCode ? (catByCode(cats, catCode)?.id ?? -1) : null;
+  const cargs = [];
+  const crow = await q1(env,
+    `SELECT COUNT(*) AS n FROM torrents t WHERE t.status = 'active'` +
+    adultSql("t", allowed) + filterSql({ catId, resolution: null, health: null }, cargs), cargs);
+  const total = crow[0]?.n || 0;
+  const totalPages = Math.max(1, Math.ceil(total / LATEST_PAGE_SIZE));
+  const p = Math.min(Math.max(1, page || 1), totalPages);
+  const args = [];
+  const sql = `SELECT ${TOR_COLS} ${TOR_JOIN} WHERE t.status = 'active'` +
+    adultSql("t", allowed) + filterSql({ catId, resolution: null, health: null }, args) +
+    ` ORDER BY t.first_seen_at DESC, t.id DESC LIMIT ? OFFSET ?`;
+  args.push(LATEST_PAGE_SIZE, (p - 1) * LATEST_PAGE_SIZE);
+  const rows = await q1(env, sql, args);
+  return { kind: "latest", category: catCode || null, torrents: rows.map((r) => torrentJson(r, cats)), total, page: p, totalPages };
+}
+
+function latestPager(d, catCode) {
+  if (d.totalPages <= 1) return "";
+  const base = "/latest?" + (catCode ? `cat=${encodeURIComponent(catCode)}&` : "");
+  const nums = [...new Set([1, d.totalPages, d.page - 1, d.page, d.page + 1])]
+    .filter((n) => n >= 1 && n <= d.totalPages).sort((a, b) => a - b);
+  let items = "";
+  let prev = 0;
+  for (const n of nums) {
+    if (prev && n - prev > 1) items += `<span>…</span>`;
+    items += n === d.page ? `<span class="cur">${n}</span>` : `<a href="${base}page=${n}">${n}</a>`;
+    prev = n;
+  }
+  return `<div class="pager">${d.page > 1 ? `<a href="${base}page=${d.page - 1}">上一页</a>` : ""}${items}${d.page < d.totalPages ? `<a href="${base}page=${d.page + 1}">下一页</a>` : ""}</div>`;
+}
+
 let _statsCache = { off: null, on: null };
 async function getStatsCached(env, allowed) {
   const key = allowed ? "on" : "off";
@@ -1525,7 +1560,15 @@ export default {
           : htmlResp(layout({ title: "未找到", body: `<div class="err">种子不存在或不可见。</div>`, adultOn: allowed, stats: heroStats }), 404);
       }
       if (path === "/top") return htmlResp(pageList(await doList(env, "top", url.searchParams.get("cat"), allowed), cats, allowed, "Top 20 热门种子", heroStats));
-      if (path === "/latest") return htmlResp(pageList(await doList(env, "latest", url.searchParams.get("cat"), allowed), cats, allowed, "最新收录", heroStats));
+      if (path === "/latest") {
+        const cat = url.searchParams.get("cat");
+        const d = await doLatestPage(env, parseInt(url.searchParams.get("page") || "1", 10) || 1, cat, allowed);
+        const body = `<section>
+<div class="result-head">共 <b>${esc(fmtNum(d.total))}</b> 条 · 第 ${d.page} / ${d.totalPages} 页（按收录时间倒序）</div>
+${d.torrents.length ? `<div class="list">${d.torrents.map((t) => torrentRow(t, cats)).join("")}</div>` : `<div class="mut">暂无数据</div>`}
+${latestPager(d, cat)}</section>`;
+        return htmlResp(layout({ title: "最新收录", body, adultOn: allowed, ptitle: "最新收录", stats: heroStats }));
+      }
       const browseMatch = path.match(/^\/browse\/([a-z]+)$/);
       if (browseMatch) {
         const c = catByCode(cats, browseMatch[1]);
