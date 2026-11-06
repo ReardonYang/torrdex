@@ -1,6 +1,6 @@
 # TorrDex（torrdex.com）设计文档
 
-> 版本：v1.1（2026-11-06，新增番号楼定向信源）
+> 版本：v1.2（2026-11-06，采集器接入自动更新）
 > 状态：**唯一口径源**。本文档与 `web/src/worker.js` 的实现逐字对齐；实现与文档不一致即缺陷，改实现必须同轮改文档（含第 12 节变更记录），交付时附发本文档。
 > 沿革：`design-v1.md`（2026-10-26 立项稿）自本文档建档起转为历史文件，不再维护；产品需求口径仍以 `PRD-v1.md` 为据，本文档管「现状实现」。
 
@@ -356,6 +356,8 @@ policy 只作数据属性：自 2026-10-28 起**不构成任何显示门槛**（
 
 家里 Windows PC 的采集器（`D:\code\crawler-package\`，常驻）→ 本地 SQLite → 定时推送 → Turso 数据库 torrent-index（东京）→ Cloudflare Worker torrdex 呈现。采集器不在 Web 仓内；Web 仓（GitHub 私有 ReardonYang/torrdex）只有呈现层。采集器现有两条入库通道：DHT 发现（元数据抓取后入库，source='dht'）与番号楼定向收割（source='site_api'，见 9.4）。
 
+**采集器代码交付通道（2026-11-06 起，与 Solekeep 同机制）**：采集器源码托管于 GitHub 私有仓 `ReardonYang/torrent-crawler`（仓根 = crawler-package 层）；PC 计划任务 TorrentCrawlerUpdate 每 15 分钟经 Clash 代理（crawler/proxy.txt）只快进拉取，`.py` 有变更即停常驻进程、由 run.bat 循环以新代码拉回。机器本地文件永不入仓、永不覆盖：`crawler/run.bat`（含 Turso 令牌）、`crawler/data/`（本地库）、`crawler/config.json`、`crawler/proxy.txt`。更新日志在 `crawler/update.log`。
+
 ### 9.2 关键表（节选，全量见 data-model-sqlite.sql，27 表）
 
 | 表 | 主键/要点 |
@@ -421,3 +423,4 @@ policy 只作数据属性：自 2026-10-28 起**不构成任何显示门槛**（
 | v1.0 | 2026-11-01 | 分页器加回页首钮，后按用户澄清改名「第一页」；其本意「首页」落为顶栏导航首项「首页」（→`/`），桌面与移动下拉同享 |
 | v1.1 | 2026-11-06 | 采集端新增番号楼定向信源（新增第 9.4 节）：搜索结果页收割 → site_api 入库、信源级番号改判 adult、对方装饰数字不进库；常驻 6 小时一轮 + 手动子命令。呈现层无改动 |
 | v1.1 | 2026-11-06 | 口径澄清（用户同日指出）：番号楼是**优先**信源而非替代——DHT 发现照旧并行全速运行，五循环互不阻塞；已写入 9.4 首条为长期口径 |
+| v1.2 | 2026-11-06 | 采集器接入自动更新（9.1 增记）：新建 GitHub 私有仓 torrent-crawler + PC 计划任务 15 分钟拉取重启，本地令牌/数据文件永不入仓；本次番号楼五文件即经此通道一次对齐生效。助理侧已以模拟 PC 全链验证（对齐后 run.bat/数据/config.json 逐字节不变、更新拉取与日志正常） |
