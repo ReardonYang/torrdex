@@ -164,5 +164,31 @@ seenSql.length = 0;
   ok(h !== h2, "hashPassword: random salt -> different hashes");
 }
 
+// ---- 8) 主题引导脚本: 必须按“已下发字节”实测 cookie 解析 (2026-11-11 回归) ----
+// 历史 bug: 外壳模板字面量里 \s 只写一层反斜杠, 下发后变 ;s* —— theme 不是
+// 第一个 cookie 时永远读不到, 切深色后一跳转就回浅色。此处提取首页 HTML 里
+// 的引导脚本原文, 在 stub document 上真跑, 不许只看源码。
+{
+  const res = await worker.fetch(new Request("https://x/"), env, ctx);
+  const html = await res.text();
+  const m = html.match(/<script>(\(function\(\)\{try\{var m=document\.cookie[^<]*theme=\(flat\|jobs\)[^<]*)<\/script>/);
+  ok(!!m, "theme bootstrap script present in served HTML");
+  if (m) {
+    const runBoot = (cookieStr) => {
+      let theme = null;
+      const document = {
+        cookie: cookieStr,
+        documentElement: { setAttribute: (k, v) => { if (k === "data-theme") theme = v; } },
+      };
+      new Function("document", m[1])(document);
+      return theme;
+    };
+    ok(runBoot("theme=flat") === "flat", "bootstrap: theme first -> flat");
+    ok(runBoot("__cf_bm=xyz; theme=flat") === "flat", "bootstrap: theme after other cookie -> flat (regression)");
+    ok(runBoot("td_user=abc; theme=jobs") === "jobs", "bootstrap: theme=jobs after other cookie -> jobs");
+    ok(runBoot("") === "jobs", "bootstrap: no cookie -> jobs default");
+  }
+}
+
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nALL TESTS PASSED");
 process.exit(failures ? 1 : 0);
