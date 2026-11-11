@@ -772,13 +772,14 @@ header.top{background:var(--bar-bg);border-bottom:1px solid var(--bar-border);bo
 .top nav a:hover{opacity:1;text-decoration:none}
 .lamp{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:0;background:transparent;color:var(--nav-ink);opacity:.75;cursor:pointer;padding:0}
 .lamp:hover{opacity:1}
-.lamp .ray{display:none}
+.lamp .rays{display:none}
 html[data-theme="flat"] .lamp{color:#f6c453;opacity:1;filter:drop-shadow(0 0 5px rgba(246,196,83,.55))}
-html[data-theme="flat"] .lamp .ray{display:block}
+html[data-theme="flat"] .lamp .rays{display:block}
 .top{position:relative}
 .burger{display:none}
 .hero{padding:72px 0 4px;text-align:center}
 .hero h1{font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-.018em;margin:0}
+.hero h1 a{color:inherit;text-decoration:none}
 html[data-theme="flat"] .hero h1{font-weight:200;letter-spacing:.14em;text-shadow:none}
 .hero p{font-size:18px;color:var(--mut);margin:14px 0 8px;font-weight:400}
 .hero p a{color:inherit;text-decoration:none}
@@ -1020,7 +1021,7 @@ if(favBtns.length){
 // 站名大标题 + 标语 + 中央大搜索 + 统计行, 由 layout 统一渲染, 页面不得自备。
 function heroHtml(stats, q) {
   const updated = stats && stats.updated_at ? fmtTime(stats.updated_at).slice(11, 16) : "--:--";
-  return `<div class="hero"><h1>TorrDex</h1>
+  return `<div class="hero"><h1><a href="/">TorrDex</a></h1>
 <p><a href="/">搜得到 · 判得准 · 拿得走 —— 全网好资源，一搜就有</a></p>
 </div>
 ${searchHeroHtml(q || "", true)}${stats ? `
@@ -1044,7 +1045,7 @@ function layout({ title, body, adultOn, q, home, ptitle, nosearch, center, stats
 <a class="logo" href="/" aria-label="磁典 TorrDex 首页"><svg class="logo-mark" viewBox="0 0 90 90" aria-hidden="true"><rect x="13.4" y="67" width="36.7" height="9" fill="currentColor"/><rect x="40.5" y="39.9" width="9" height="36.7" fill="currentColor"/><rect x="39.9" y="40.5" width="36.7" height="9" fill="currentColor"/><rect x="67" y="13.4" width="9" height="36.7" fill="currentColor"/><rect x="10" y="10" width="17" height="4.2" fill="currentColor"/><rect x="10" y="22.8" width="17" height="4.2" fill="currentColor"/><rect x="10" y="10" width="4.2" height="17" fill="currentColor"/><rect x="22.8" y="10" width="4.2" height="17" fill="currentColor"/><rect x="10" y="36.5" width="17" height="4.2" fill="currentColor"/><rect x="10" y="49.3" width="17" height="4.2" fill="currentColor"/><rect x="10" y="36.5" width="4.2" height="17" fill="currentColor"/><rect x="22.8" y="36.5" width="4.2" height="17" fill="currentColor"/><rect x="10" y="63" width="17" height="17" fill="currentColor"/><rect x="36.5" y="10" width="17" height="4.2" fill="currentColor"/><rect x="36.5" y="22.8" width="17" height="4.2" fill="currentColor"/><rect x="36.5" y="10" width="4.2" height="17" fill="currentColor"/><rect x="49.3" y="10" width="4.2" height="17" fill="currentColor"/><rect x="36.5" y="36.5" width="17" height="17" fill="currentColor"/><rect x="36.5" y="63" width="17" height="17" fill="currentColor"/><rect x="63" y="10" width="17" height="17" fill="#1171e8"/><rect x="63" y="36.5" width="17" height="17" fill="currentColor"/><rect x="63" y="63" width="17" height="4.2" fill="currentColor"/><rect x="63" y="75.8" width="17" height="4.2" fill="currentColor"/><rect x="63" y="63" width="4.2" height="17" fill="currentColor"/><rect x="75.8" y="63" width="4.2" height="17" fill="currentColor"/></svg><span class="logo-txt"><span class="logo-cn">磁典</span><span class="logo-en">TorrDex</span></span></a>
 <nav><a href="/">首页</a><a href="/top">Top20</a><a href="/latest">最新收录</a><a href="/browse/movie">电影</a><a href="/browse/tv">剧集</a><a href="/browse/anime">动漫</a><a href="/browse/software">软件</a></nav>
 <button type="button" class="burger" id="burger" aria-label="菜单" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
-<button type="button" class="lamp" id="lamp" aria-label="切换浅色 / 深色" title="切换浅色 / 深色"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ray" d="M12 .8v1.5"/><path class="ray" d="M4.4 3.2l1.1 1.2"/><path class="ray" d="M19.6 3.2l-1.1 1.2"/><path class="ray" d="M1.6 9.5h1.5"/><path class="ray" d="M20.9 9.5h1.5"/><path d="M9.5 18h5"/><path d="M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.2 1.1 2.2h5c0-1 .4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg></button>
+<button type="button" class="lamp" id="lamp" aria-label="切换浅色 / 深色" title="切换浅色 / 深色"><svg viewBox="-1 -1 26 26" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="rays" stroke-width="1.5"><path d="M12 .8V-.3"/><path d="M7.9 1.9L7.1 .4"/><path d="M16.1 1.9L16.9 .4"/><path d="M4.9 4.9L3.4 4"/><path d="M19.1 4.9L20.6 4"/><path d="M3.8 9H2.1"/><path d="M20.2 9h1.7"/></g><path d="M9.5 18h5"/><path d="M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.2 1.1 2.2h5c0-1 .4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg></button>
 <span class="acct-btns" id="acct-btns"><a class="acct-btn" href="/login">登录</a><a class="acct-btn primary" href="/register">注册</a></span>
 </div></header>
 <main class="wrap${center ? " center-main" : ""}">${nosearch ? "" : heroHtml(stats, q)}${!nosearch && ptitle ? `<div class="page-head"><h1 class="ptitle">${esc(ptitle)}</h1></div>` : ""}${body}</main>
